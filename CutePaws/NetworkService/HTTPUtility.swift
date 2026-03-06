@@ -9,7 +9,7 @@
 
 import Foundation
 
-final class HTTPUtility: NetworkService {
+final class HTTPUtility {
 
     private let session: URLSession
     private let decoder: JSONDecoder

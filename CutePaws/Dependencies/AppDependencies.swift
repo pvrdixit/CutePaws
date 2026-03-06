@@ -36,8 +36,7 @@ final class AppDependencies {
     let logger: LoggerService
 
     /// Shared infrastructure
-    lazy var networkService: NetworkService = HTTPUtility(timeout: 8.0)
-
+    lazy var httpUtility = HTTPUtility(timeout: 8.0)
 
     init(
         environment: AppRuntimeEnvironment = .current,

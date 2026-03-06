@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		B01DFB7F2F5AB1510099F092 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = B01DFB7E2F5AB1510099F092 /* Kingfisher */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		B01DFAFD2F5A95FF0099F092 /* CutePaws.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CutePaws.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -27,7 +23,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B01DFB7F2F5AB1510099F092 /* Kingfisher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +65,6 @@
 			);
 			name = CutePaws;
 			packageProductDependencies = (
-				B01DFB7E2F5AB1510099F092 /* Kingfisher */,
 			);
 			productName = CutePaws;
 			productReference = B01DFAFD2F5A95FF0099F092 /* CutePaws.app */;
@@ -101,7 +95,6 @@
 			mainGroup = B01DFAF42F5A95FF0099F092;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B01DFB7D2F5AB1510099F092 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B01DFAFE2F5A95FF0099F092 /* Products */;
@@ -353,25 +346,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		B01DFB7D2F5AB1510099F092 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.8.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		B01DFB7E2F5AB1510099F092 /* Kingfisher */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B01DFB7D2F5AB1510099F092 /* XCRemoteSwiftPackageReference "Kingfisher" */;
-			productName = Kingfisher;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B01DFAF52F5A95FF0099F092 /* Project object */;
 }

@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct CutePawsApp: App {
+    private let appDependencies = AppDependencies()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            DiscoverView()
         }
     }
 }
