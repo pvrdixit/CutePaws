@@ -1,8 +1,11 @@
 import Foundation
 
-final class ImageDownloadService {
+protocol ImageDownloading {
+    func downloadImages(from urls: [URL], maxConcurrent: Int) async -> [(url: URL, data: Data)]
+}
+
+final class ImageDownloadService: ImageDownloading {
     private let httpUtility: HTTPUtility
-    private let minimumImageByteCount = 25 * 1024
 
     init(httpUtility: HTTPUtility) {
         self.httpUtility = httpUtility
@@ -15,7 +18,7 @@ final class ImageDownloadService {
 
         await withTaskGroup(of: (URL, Data)?.self) { group in
             for url in deduplicate(urls) {
-                group.addTask { [httpUtility, minimumImageByteCount] in
+                group.addTask { [httpUtility] in
                     await semaphore.acquire()
 
                     if Task.isCancelled {
@@ -26,8 +29,6 @@ final class ImageDownloadService {
                     do {
                         let data = try await httpUtility.requestData(with: URLRequest(url: url))
                         await semaphore.release()
-
-                        guard data.count >= minimumImageByteCount else { return nil }
                         return (url, data)
                     } catch {
                         await semaphore.release()

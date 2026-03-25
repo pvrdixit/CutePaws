@@ -2,23 +2,28 @@ import SwiftUI
 
 @main
 struct CutePawsApp: App {
-    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var discoverViewModel: DiscoverViewModel
 
     @MainActor
     init() {
         let dependencies = AppDependencies()
-        _discoverViewModel = StateObject(wrappedValue: dependencies.makeDiscoverViewModel())
+        let discoverViewModel = dependencies.makeDiscoverViewModel()
+
+        #if DEBUG
+        print("CutePawsApp: init start")
+        #endif
+
+        discoverViewModel.start()
+        _discoverViewModel = StateObject(wrappedValue: discoverViewModel)
+
+        #if DEBUG
+        print("CutePawsApp: init end")
+        #endif
     }
 
     var body: some Scene {
         WindowGroup {
             DiscoverView(viewModel: discoverViewModel)
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .background {
-                discoverViewModel.clearRefreshDateForTesting()
-            }
         }
     }
 }

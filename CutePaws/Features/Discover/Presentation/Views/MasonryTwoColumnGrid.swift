@@ -3,52 +3,43 @@ import UIKit
 
 struct MasonryTwoColumnGrid: View {
     let items: [MediaItem]
+    let availableWidth: CGFloat
     let onSelect: (MediaItem) -> Void
 
     private let gutter: CGFloat = 12
     private let cornerRadius: CGFloat = 14
 
     var body: some View {
-        GeometryReader { geometry in
-            let columnWidth = (geometry.size.width - gutter * 3) / 2
-            let columns = split(items: items, columnWidth: columnWidth)
+        let columnWidth = max(1, (availableWidth - gutter) / 2)
+        let columns = split(items: items, columnWidth: columnWidth)
 
-            ZStack {
-                Color(uiColor: .systemBackground)
-                    .ignoresSafeArea()
+        HStack(alignment: .top, spacing: gutter) {
+            VStack(spacing: gutter) {
+                ForEach(columns.left) { item in
+                    MasonryCell(
+                        item: item,
+                        width: columnWidth,
+                        cornerRadius: cornerRadius,
+                        onSelect: onSelect
+                    )
+                }
+            }
 
-                ScrollView {
-                    HStack(alignment: .top, spacing: gutter) {
-                        LazyVStack(spacing: gutter) {
-                            ForEach(columns.left) { item in
-                                MasonryCell(
-                                    item: item,
-                                    width: columnWidth,
-                                    cornerRadius: cornerRadius,
-                                    onSelect: onSelect
-                                )
-                            }
-                        }
-
-                        LazyVStack(spacing: gutter) {
-                            ForEach(columns.right) { item in
-                                MasonryCell(
-                                    item: item,
-                                    width: columnWidth,
-                                    cornerRadius: cornerRadius,
-                                    onSelect: onSelect
-                                )
-                            }
-                        }
-                    }
-                    .padding(.horizontal, gutter)
-                    .padding(.vertical, gutter)
+            VStack(spacing: gutter) {
+                ForEach(columns.right) { item in
+                    MasonryCell(
+                        item: item,
+                        width: columnWidth,
+                        cornerRadius: cornerRadius,
+                        onSelect: onSelect
+                    )
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
-    private func split(items: [MediaItem], columnWidth: CGFloat) -> (left: [MediaItem], right: [MediaItem]) {
+    private func split(items: [MediaItem], columnWidth: CGFloat) -> MasonryColumns {
         var left: [MediaItem] = []
         var right: [MediaItem] = []
 
@@ -68,8 +59,16 @@ struct MasonryTwoColumnGrid: View {
             }
         }
 
-        return (left, right)
+        return MasonryColumns(
+            left: left,
+            right: right
+        )
     }
+}
+
+private struct MasonryColumns {
+    let left: [MediaItem]
+    let right: [MediaItem]
 }
 
 private struct MasonryCell: View {
@@ -86,7 +85,7 @@ private struct MasonryCell: View {
             onSelect(item)
         } label: {
             Group {
-                if let image = UIImage(data: item.imageData) {
+                if let image = loadImage(from: item.localFilePath) {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -103,4 +102,33 @@ private struct MasonryCell: View {
         }
         .buttonStyle(.plain)
     }
+
+    private func loadImage(from path: String?) -> UIImage? {
+        guard let path else { return nil }
+        return UIImage(contentsOfFile: path)
+    }
+}
+
+#Preview("Masonry Grid") {
+    GeometryReader { geometry in
+        MasonryTwoColumnGrid(
+            items: PreviewData.mediaItems,
+            availableWidth: geometry.size.width,
+            onSelect: { _ in }
+        )
+        .background(Color(uiColor: .systemBackground))
+    }
+}
+
+#Preview("Masonry Cell") {
+    GeometryReader { geometry in
+        MasonryCell(
+            item: PreviewData.mediaItems[0],
+            width: geometry.size.width,
+            cornerRadius: 14,
+            onSelect: { _ in }
+        )
+        .background(Color(uiColor: .systemBackground))
+    }
+   
 }

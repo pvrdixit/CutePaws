@@ -70,9 +70,9 @@ struct ImageDetailView: View {
 
     @ViewBuilder
     private func imagePage(for item: MediaItem) -> some View {
-        if UIImage(data: item.imageData) != nil {
+        if hasImage(at: item.localFilePath) {
             ZoomableImageView(
-                imageData: item.imageData,
+                imagePath: item.localFilePath,
                 imageID: item.id,
                 isSelected: viewModel.currentItem?.id == item.id
             ) { isZoomed in
@@ -87,6 +87,11 @@ struct ImageDetailView: View {
         }
     }
 
+    private func hasImage(at path: String?) -> Bool {
+        guard let path else { return false }
+        return UIImage(contentsOfFile: path) != nil
+    }
+
     private var backgroundColor: Color {
         colorScheme == .dark ? .black : Color(uiColor: .systemBackground)
     }
@@ -98,4 +103,11 @@ struct ImageDetailView: View {
     private var emptyStateForegroundColor: Color {
         Color(uiColor: .secondaryLabel)
     }
+}
+
+#Preview {
+    let items = PreviewData.mediaItems
+    return ImageDetailView(
+        viewModel: ImageDetailViewModel(items: items, selectedItemID: items[0].id)
+    )
 }

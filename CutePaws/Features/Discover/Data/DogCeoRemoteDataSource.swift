@@ -1,6 +1,10 @@
 import Foundation
 
-final class DogCeoRemoteDataSource {
+protocol DiscoverRemoteDataSource {
+    func fetchImageURLs(count: Int) async throws -> [URL]
+}
+
+final class DogCeoRemoteDataSource: DiscoverRemoteDataSource {
     private let httpUtility: HTTPUtility
 
     init(httpUtility: HTTPUtility) {

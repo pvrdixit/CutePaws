@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 struct ZoomableImageView: UIViewRepresentable {
-    let imageData: Data
+    let imagePath: String?
     let imageID: String
     let isSelected: Bool
     let onZoomStateChanged: (Bool) -> Void
@@ -37,7 +37,7 @@ struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.onZoomStateChanged = onZoomStateChanged
         context.coordinator.update(
             scrollView: scrollView,
-            imageData: imageData,
+            imagePath: imagePath,
             imageID: imageID,
             isSelected: isSelected
         )
@@ -56,14 +56,14 @@ struct ZoomableImageView: UIViewRepresentable {
 
         func update(
             scrollView: UIScrollView,
-            imageData: Data,
+            imagePath: String?,
             imageID: String,
             isSelected: Bool
         ) {
             var imageDidChange = false
 
             if currentImageID != imageID {
-                imageView.image = UIImage(data: imageData)
+                imageView.image = imagePath.flatMap(UIImage.init(contentsOfFile:))
                 currentImageID = imageID
                 lastBoundsSize = .zero
                 scrollView.zoomScale = 1.0
@@ -150,4 +150,16 @@ struct ZoomableImageView: UIViewRepresentable {
             imageView.frame = frameToCenter
         }
     }
+}
+
+#Preview {
+    let item = PreviewData.mediaItems[0]
+
+    return ZoomableImageView(
+        imagePath: item.localFilePath,
+        imageID: item.id,
+        isSelected: true,
+        onZoomStateChanged: { _ in }
+    )
+    .background(Color(uiColor: .systemBackground))
 }

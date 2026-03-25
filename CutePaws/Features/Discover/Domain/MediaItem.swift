@@ -2,7 +2,7 @@ import Foundation
 
 struct MediaItem: Identifiable, Equatable, Sendable {
     let remoteURL: URL
-    let imageData: Data
+    let localFilePath: String?
     let aspectRatio: Double
     let source: MediaSource
     let createdAt: Date
