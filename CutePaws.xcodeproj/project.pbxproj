@@ -11,7 +11,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B01DFAFF2F5A95FF0099F092 /* CutePaws */ = {
+		B01DFCCF2F5B3B0B0099F092 /* CutePaws */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = CutePaws;
 			sourceTree = "<group>";
@@ -32,7 +32,7 @@
 		B01DFAF42F5A95FF0099F092 = {
 			isa = PBXGroup;
 			children = (
-				B01DFAFF2F5A95FF0099F092 /* CutePaws */,
+				B01DFCCF2F5B3B0B0099F092 /* CutePaws */,
 				B01DFAFE2F5A95FF0099F092 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,7 +61,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B01DFAFF2F5A95FF0099F092 /* CutePaws */,
+				B01DFCCF2F5B3B0B0099F092 /* CutePaws */,
 			);
 			name = CutePaws;
 			packageProductDependencies = (

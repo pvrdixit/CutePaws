@@ -1,10 +1,3 @@
-//
-//  LoadingView.swift
-//  CutePaws
-//
-//  Created by Vijay Raj Dixit on 06/03/26.
-//
-
 import SwiftUI
 
 struct LoadingView: View {
@@ -13,7 +6,14 @@ struct LoadingView: View {
 
     var body: some View {
         ZStack {
-            Color.accentColor
+            LinearGradient(
+                colors: [
+                    Color.accentColor.opacity(0.12),
+                    Color(uiColor: .systemBackground)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
@@ -25,22 +25,16 @@ struct LoadingView: View {
                         .opacity(isFilled ? 1 : 0)
                 }
                 .font(.system(size: 48))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 72, height: 72)
                 .scaleEffect(breathe ? 1.02 : 0.98)
-                .animation(
-                    .easeInOut(duration: 2.2).repeatForever(autoreverses: true),
-                    value: breathe
-                )
-                .animation(
-                    .easeInOut(duration: 0.9),
-                    value: isFilled
-                )
+                .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: breathe)
+                .animation(.easeInOut(duration: 0.9), value: isFilled)
 
                 Text("Getting your daily dose of cuteness...")
                     .font(.system(size: 18))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(uiColor: .label))
             }
             .padding(.horizontal, 24)
         }
@@ -53,4 +47,8 @@ struct LoadingView: View {
             }
         }
     }
+}
+
+#Preview {
+    LoadingView()
 }
