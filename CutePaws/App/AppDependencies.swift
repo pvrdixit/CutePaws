@@ -3,10 +3,10 @@ import SwiftData
 
 @MainActor
 final class AppDependencies {
-    private let logger: AppLogger
-    private let httpUtility: HTTPUtility
-    private let discoverModelContainer: ModelContainer
-    private let spotlightModelContainer: ModelContainer
+    let logger: AppLogger
+    let httpUtility: HTTPUtility
+    let discoverModelContainer: ModelContainer
+    let spotlightModelContainer: ModelContainer
 
     init() {
         logger = AppLogger(subsystem: Bundle.main.bundleIdentifier ?? "CutePaws")
@@ -37,12 +37,12 @@ final class AppDependencies {
         }
     }
 
-    private lazy var discoverStore = SwiftDataDiscoverStore(
+    lazy var discoverStore = SwiftDataDiscoverStore(
         container: discoverModelContainer,
         fileStorage: mediaFileStorage,
         logger: logger
     )
-    private lazy var spotlightStore = SwiftDataSpotlightStore(
+    lazy var spotlightStore = SwiftDataSpotlightStore(
         container: spotlightModelContainer,
         fileStorage: spotlightMediaFileStorage,
         logger: logger
@@ -55,7 +55,7 @@ final class AppDependencies {
     private lazy var dogCeoRemoteDataSource = DogCeoRemoteDataSource(httpUtility: httpUtility)
     private lazy var randomDogRemoteDataSource = RandomDogRemoteDataSource(httpUtility: httpUtility)
 
-    private lazy var discoverRepository: DiscoverRepository = DiscoverRepositoryImpl(
+    lazy var discoverRepository: DiscoverRepository = DiscoverRepositoryImpl(
         remoteDataSource: dogCeoRemoteDataSource,
         imageDownloadService: imageDownloadService,
         imageMetadataService: imageMetadataService,
@@ -63,7 +63,8 @@ final class AppDependencies {
         store: discoverStore,
         logger: logger
     )
-    private lazy var spotlightRepository: SpotlightRepository = SpotlightRepositoryImpl(
+    
+    lazy var spotlightRepository: SpotlightRepository = SpotlightRepositoryImpl(
         remoteDataSource: randomDogRemoteDataSource,
         imageDownloadService: imageDownloadService,
         imageMetadataService: imageMetadataService,
@@ -71,41 +72,4 @@ final class AppDependencies {
         store: spotlightStore,
         logger: logger
     )
-
-    func makeDiscoverViewModel() -> DiscoverViewModel {
-        let initialItems = discoverStore.fetchItemsSnapshot(limit: 20)
-        let initialSpotlightItem = spotlightStore.fetchItemsSnapshot(limit: 1).first
-
-        #if DEBUG
-        print("AppDependencies.makeDiscoverViewModel initialItems:", initialItems.count)
-        #endif
-
-        return DiscoverViewModel(
-            repository: discoverRepository,
-            spotlightRepository: spotlightRepository,
-            initialItems: initialItems,
-            initialSpotlightImagePath: initialSpotlightItem?.localFilePath,
-            initialSpotlightAspectRatio: initialSpotlightItem?.aspectRatio,
-            visibleItemCount: 20
-        )
-    }
-
-    private static func makeApplicationSupportDirectory(using fileManager: FileManager) throws -> URL {
-        let directoryURL = try fileManager
-            .url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )
-            .appendingPathComponent("CutePaws", isDirectory: true)
-
-        try fileManager.createDirectory(
-            at: directoryURL,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
-
-        return directoryURL
-    }
 }

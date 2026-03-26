@@ -24,13 +24,16 @@ struct MasonryTwoColumnGrid: View {
     }
 
     var body: some View {
+        let safeAvailableWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
+        let safeSpacing = spacing.isFinite ? max(0, spacing) : 0
+
         // Two columns: column width is computed from (left + middle + right + two columns).
-        let usableWidth = max(0, availableWidth - spacing)
+        let usableWidth = max(0, safeAvailableWidth - safeSpacing)
         let columnWidth = max(1, usableWidth / 2)
         let columns = split(items: items, columnWidth: columnWidth)
 
-        HStack(alignment: .top, spacing: spacing) {
-            VStack(spacing: spacing) {
+        HStack(alignment: .top, spacing: safeSpacing) {
+            VStack(spacing: safeSpacing) {
                 ForEach(columns.left) { item in
                     MasonryCell(
                         item: item,
@@ -41,7 +44,7 @@ struct MasonryTwoColumnGrid: View {
                 }
             }
 
-            VStack(spacing: spacing) {
+            VStack(spacing: safeSpacing) {
                 ForEach(columns.right) { item in
                     MasonryCell(
                         item: item,
@@ -52,7 +55,7 @@ struct MasonryTwoColumnGrid: View {
                 }
             }
         }
-        .frame(width: availableWidth, alignment: .topLeading)
+        .frame(width: safeAvailableWidth, alignment: .topLeading)
     }
 
     private func split(items: [MediaItem], columnWidth: CGFloat) -> MasonryColumns {
