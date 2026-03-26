@@ -3,13 +3,12 @@ import UIKit
 
 struct ImageDetailView: View {
     @ObservedObject var viewModel: ImageDetailViewModel
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @State private var isCurrentImageZoomed = false
 
     var body: some View {
         ZStack(alignment: .top) {
-            backgroundColor.ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
 
             TabView(selection: $viewModel.selectedIndex) {
                 ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
@@ -90,10 +89,6 @@ struct ImageDetailView: View {
     private func hasImage(at path: String?) -> Bool {
         guard let path else { return false }
         return ImageCache.shared.image(forFilePath: path) != nil
-    }
-
-    private var backgroundColor: Color {
-        colorScheme == .dark ? .black : Color(uiColor: .systemBackground)
     }
 
     private var headerForegroundColor: Color {

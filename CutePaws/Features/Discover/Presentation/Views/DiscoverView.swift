@@ -26,13 +26,6 @@ struct DiscoverView: View {
         switch viewModel.state {
         case .loading:
             LoadingView()
-                .background {
-                    CinematicBackdrop(
-                        imagePath: viewModel.spotlightImagePath,
-                        fallbackImageName: "Featured"
-                    )
-                    .ignoresSafeArea()
-                }
 
         case .error(let message):
             ScrollView(showsIndicators: false) {
@@ -53,13 +46,7 @@ struct DiscoverView: View {
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                CinematicBackdrop(
-                    imagePath: viewModel.spotlightImagePath,
-                    fallbackImageName: "Featured"
-                )
-                .ignoresSafeArea()
-            }
+            .background(Color.appBackground)
 
         case .loaded:
             ScrollView(showsIndicators: false) {
@@ -90,7 +77,7 @@ struct DiscoverView: View {
                         MasonryTwoColumnGrid(
                             items: viewModel.items,
                             availableWidth: proxy.size.width - 2 * Layout.horizontalPadding,
-                            spacing: 8,
+                            spacing: 12.0,
                             onSelect: viewModel.showImageDetail
                         )
                         .padding(.horizontal, Layout.horizontalPadding)
@@ -100,13 +87,7 @@ struct DiscoverView: View {
                 .padding(.bottom, proxy.safeAreaInsets.bottom)
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
-            .background {
-                CinematicBackdrop(
-                    imagePath: viewModel.spotlightImagePath,
-                    fallbackImageName: "Featured"
-                )
-                .ignoresSafeArea()
-            }
+            .background(Color.appBackground)
         }
     }
 

@@ -1,6 +1,11 @@
 import Foundation
 
 extension DiscoverViewModel {
+    private func currentSpotlightDisplayItem() async -> SpotlightItem? {
+        // Store returns newest-first; taking `last` gives FIFO display from oldest.
+        await spotlightRepository.loadCached(limit: spotlightImageLimit).last
+    }
+
     func startSpotlight(forceReload: Bool) {
         spotlightTask?.cancel()
         spotlightTask = Task { [weak self] in
@@ -13,8 +18,7 @@ extension DiscoverViewModel {
         await spotlightRepository.prepare()
         guard !Task.isCancelled else { return }
 
-        let cachedItems = await spotlightRepository.loadCached(limit: 1)
-        if let firstItem = cachedItems.first {
+        if let firstItem = await currentSpotlightDisplayItem() {
             guard !Task.isCancelled else { return }
             spotlightImagePath = firstItem.localFilePath
             spotlightAspectRatio = firstItem.aspectRatio
@@ -46,7 +50,7 @@ extension DiscoverViewModel {
         do {
             try await fillSpotlightCache(untilAtLeast: 1)
             guard !Task.isCancelled else { return }
-            let first = await spotlightRepository.loadCached(limit: 1).first
+            let first = await currentSpotlightDisplayItem()
             spotlightImagePath = first?.localFilePath
             spotlightAspectRatio = first?.aspectRatio
             markRefreshedToday(forKey: AppDefaults.spotlightLastRefreshDateKey)
@@ -91,7 +95,7 @@ extension DiscoverViewModel {
         }
 
         guard !Task.isCancelled else { return }
-        let first = await spotlightRepository.loadCached(limit: 1).first
+        let first = await currentSpotlightDisplayItem()
         spotlightImagePath = first?.localFilePath
         spotlightAspectRatio = first?.aspectRatio
     }
@@ -102,7 +106,7 @@ extension DiscoverViewModel {
             try await spotlightRepository.fetchAndStore(count: spotlightImageLimit)
             await spotlightRepository.trimToLatest(maxCount: spotlightImageLimit)
             guard !Task.isCancelled else { return }
-            let first = await spotlightRepository.loadCached(limit: 1).first
+            let first = await currentSpotlightDisplayItem()
             spotlightImagePath = first?.localFilePath
             spotlightAspectRatio = first?.aspectRatio
         } catch {

@@ -5,12 +5,12 @@ extension AppDependencies {
     private enum DiscoverLimits {
         static let dailyPicksVisibleCount = 20
         static let dailyPicksImageLimit = 20
-        static let spotlightImageLimit = 2
+        static let spotlightImageLimit = 5
     }
 
     func makeDiscoverViewModel() -> DiscoverViewModel {
         let initialItems = discoverStore.fetchItemsSnapshot(limit: DiscoverLimits.dailyPicksVisibleCount)
-        let initialSpotlightItem = spotlightStore.fetchItemsSnapshot(limit: 1).first
+        let initialSpotlightItem = spotlightStore.fetchItemsSnapshot(limit: DiscoverLimits.spotlightImageLimit).last
 
         #if DEBUG
         print("AppDependencies.makeDiscoverViewModel initialItems:", initialItems.count)

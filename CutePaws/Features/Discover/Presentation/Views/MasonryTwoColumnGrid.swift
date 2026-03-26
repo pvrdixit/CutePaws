@@ -78,10 +78,7 @@ struct MasonryTwoColumnGrid: View {
             }
         }
 
-        return MasonryColumns(
-            left: left,
-            right: right
-        )
+        return leftHeight < rightHeight ? MasonryColumns(left: right, right: left) : MasonryColumns(left: left, right: right)
     }
 }
 

@@ -20,7 +20,7 @@ struct SpotlightView: View {
     }
 
     var body: some View {
-        let aspectRatioValue = aspectRatio ?? fallbackAspectRatio
+        let aspectRatioValue = resolvedAspectRatio
 
         ZStack(alignment: .bottomLeading) {
             if let image = ImageCache.shared.image(forFilePath: imagePath) {
@@ -37,6 +37,21 @@ struct SpotlightView: View {
         .aspectRatio(aspectRatioValue, contentMode: .fit)
         .onTapGesture { onTap() }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private var resolvedAspectRatio: Double {
+        if let aspectRatio, aspectRatio > 0 {
+            return aspectRatio
+        }
+
+        if
+            let size = UIImage(named: defaultImage)?.size,
+            size.height > 0
+        {
+            return Double(size.width / size.height)
+        }
+
+        return fallbackAspectRatio
     }
 }
 
