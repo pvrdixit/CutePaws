@@ -9,12 +9,12 @@ struct MasonryTwoColumnGrid: View {
     /// Same spacing for left edge, right edge, middle (between columns), and vertical (between cells).
     let spacing: CGFloat
 
-    private let cornerRadius: CGFloat = 14
+    private let cornerRadius: CGFloat = 15.0
 
     init(
         items: [MediaItem],
         availableWidth: CGFloat,
-        spacing: CGFloat = 12,
+        spacing: CGFloat,
         onSelect: @escaping (MediaItem) -> Void
     ) {
         self.items = items
@@ -25,7 +25,7 @@ struct MasonryTwoColumnGrid: View {
 
     var body: some View {
         // Two columns: column width is computed from (left + middle + right + two columns).
-        let usableWidth = max(0, availableWidth - (spacing * 3))
+        let usableWidth = max(0, availableWidth - spacing)
         let columnWidth = max(1, usableWidth / 2)
         let columns = split(items: items, columnWidth: columnWidth)
 
@@ -52,8 +52,6 @@ struct MasonryTwoColumnGrid: View {
                 }
             }
         }
-        .padding(.leading, spacing)
-        .padding(.trailing, spacing)
         .frame(width: availableWidth, alignment: .topLeading)
     }
 
@@ -131,7 +129,7 @@ private struct MasonryCell: View {
         MasonryTwoColumnGrid(
             items: PreviewData.mediaItems,
             availableWidth: geometry.size.width,
-            spacing: 12,
+            spacing: 8,
             onSelect: { _ in }
         )
         .background(Color(uiColor: .systemBackground))
@@ -143,7 +141,7 @@ private struct MasonryCell: View {
         MasonryCell(
             item: PreviewData.mediaItems[0],
             width: geometry.size.width,
-            cornerRadius: 14,
+            cornerRadius: 15,
             onSelect: { _ in }
         )
         .background(Color(uiColor: .systemBackground))

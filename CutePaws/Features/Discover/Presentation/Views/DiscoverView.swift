@@ -3,6 +3,12 @@ import SwiftUI
 struct DiscoverView: View {
     @StateObject var viewModel: DiscoverViewModel
 
+    private enum Layout {
+        static let horizontalPadding: CGFloat = 12
+        static let sectionHeaderBottomSpacing: CGFloat = 15.0
+        static let spacingAfterSection: CGFloat = 30
+    }
+
     var body: some View {
         NavigationStack {
             GeometryReader { proxy in
@@ -44,22 +50,37 @@ struct DiscoverView: View {
 
         case .loaded:
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Title
                     titleView
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, Layout.horizontalPadding)
+                        .padding(.bottom, Layout.spacingAfterSection)
 
-                    DiscoverSectionView(title: "Daily Picks")
-                        .padding(.horizontal, 12)
+                    // Spotlight section
+                    section {
+                        DiscoverSectionView(title: "Spotlight")
+                            .padding(.horizontal, Layout.horizontalPadding)
+                    } content: {
+                        SpotlightView(onTap: viewModel.retry)
+                            .padding(.horizontal, Layout.horizontalPadding)
+                    }
 
-                    MasonryTwoColumnGrid(
-                        items: viewModel.items,
-                        availableWidth: proxy.size.width,
-                        spacing: 8,
-                        onSelect: viewModel.showImageDetail
-                    )
+                    // Daily Picks section
+                    section {
+                        DiscoverSectionView(title: "Daily Picks")
+                            .padding(.horizontal, Layout.horizontalPadding)
+                    } content: {
+                        MasonryTwoColumnGrid(
+                            items: viewModel.items,
+                            availableWidth: proxy.size.width - 2 * Layout.horizontalPadding,
+                            spacing: 8,
+                            onSelect: viewModel.showImageDetail
+                        )
+                        .padding(.horizontal, Layout.horizontalPadding)
+                    }
                 }
-                .padding(.top, max(proxy.safeAreaInsets.top + 8, 12))
-                .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 20))
+                .padding(.top, proxy.safeAreaInsets.top)
+                .padding(.bottom, proxy.safeAreaInsets.bottom)
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
             .background(Color(uiColor: .systemBackground))
@@ -68,6 +89,16 @@ struct DiscoverView: View {
 
     private var titleView: some View {
         DiscoverTitleView(title: "Discover")
+    }
+
+    // MARK: - Section builder
+    @ViewBuilder
+    private func section<Header: View, Content: View>(@ViewBuilder header: () -> Header, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Layout.sectionHeaderBottomSpacing) {
+            header()
+            content()
+        }
+        .padding(.bottom, Layout.spacingAfterSection)
     }
 }
 
