@@ -17,7 +17,7 @@ final class ImageDownloadService: ImageDownloading {
         results.reserveCapacity(urls.count)
 
         await withTaskGroup(of: (URL, Data)?.self) { group in
-            for url in deduplicate(urls) {
+            for url in urls {
                 group.addTask { [httpUtility] in
                     await semaphore.acquire()
 
@@ -45,10 +45,5 @@ final class ImageDownloadService: ImageDownloading {
         }
 
         return results
-    }
-
-    private func deduplicate(_ urls: [URL]) -> [URL] {
-        var seen = Set<String>()
-        return urls.filter { seen.insert($0.absoluteString).inserted }
     }
 }

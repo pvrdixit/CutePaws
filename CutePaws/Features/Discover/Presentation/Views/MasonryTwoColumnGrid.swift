@@ -6,15 +6,31 @@ struct MasonryTwoColumnGrid: View {
     let availableWidth: CGFloat
     let onSelect: (MediaItem) -> Void
 
-    private let gutter: CGFloat = 12
+    /// Same spacing for left edge, right edge, middle (between columns), and vertical (between cells).
+    let spacing: CGFloat
+
     private let cornerRadius: CGFloat = 14
 
+    init(
+        items: [MediaItem],
+        availableWidth: CGFloat,
+        spacing: CGFloat = 12,
+        onSelect: @escaping (MediaItem) -> Void
+    ) {
+        self.items = items
+        self.availableWidth = availableWidth
+        self.spacing = spacing
+        self.onSelect = onSelect
+    }
+
     var body: some View {
-        let columnWidth = max(1, (availableWidth - gutter) / 2)
+        // Two columns: column width is computed from (left + middle + right + two columns).
+        let usableWidth = max(0, availableWidth - (spacing * 3))
+        let columnWidth = max(1, usableWidth / 2)
         let columns = split(items: items, columnWidth: columnWidth)
 
-        HStack(alignment: .top, spacing: gutter) {
-            VStack(spacing: gutter) {
+        HStack(alignment: .top, spacing: spacing) {
+            VStack(spacing: spacing) {
                 ForEach(columns.left) { item in
                     MasonryCell(
                         item: item,
@@ -25,7 +41,7 @@ struct MasonryTwoColumnGrid: View {
                 }
             }
 
-            VStack(spacing: gutter) {
+            VStack(spacing: spacing) {
                 ForEach(columns.right) { item in
                     MasonryCell(
                         item: item,
@@ -36,7 +52,9 @@ struct MasonryTwoColumnGrid: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .top)
+        .padding(.leading, spacing)
+        .padding(.trailing, spacing)
+        .frame(width: availableWidth, alignment: .topLeading)
     }
 
     private func split(items: [MediaItem], columnWidth: CGFloat) -> MasonryColumns {
@@ -52,10 +70,10 @@ struct MasonryTwoColumnGrid: View {
 
             if leftHeight < rightHeight {
                 left.append(item)
-                leftHeight += estimatedHeight + gutter
+                leftHeight += estimatedHeight + spacing
             } else {
                 right.append(item)
-                rightHeight += estimatedHeight + gutter
+                rightHeight += estimatedHeight + spacing
             }
         }
 
@@ -104,8 +122,7 @@ private struct MasonryCell: View {
     }
 
     private func loadImage(from path: String?) -> UIImage? {
-        guard let path else { return nil }
-        return UIImage(contentsOfFile: path)
+        ImageCache.shared.image(forFilePath: path)
     }
 }
 
@@ -114,6 +131,7 @@ private struct MasonryCell: View {
         MasonryTwoColumnGrid(
             items: PreviewData.mediaItems,
             availableWidth: geometry.size.width,
+            spacing: 12,
             onSelect: { _ in }
         )
         .background(Color(uiColor: .systemBackground))

@@ -18,6 +18,8 @@ final class DiscoverViewModel: ObservableObject {
     private let dailyRefreshCount = 20
     private let lastRefreshDateKey = "discover.lastRefreshDate"
 
+    private var loadTask: Task<Void, Never>?
+
     init(
         repository: DiscoverRepository,
         initialItems: [MediaItem] = [],
@@ -38,17 +40,12 @@ final class DiscoverViewModel: ObservableObject {
         started = true
 
         debugLog("start items=\(items.count) state=\(stateLabel)")
-
-        Task {
-            await loadDiscoverItems()
-        }
+        runLoad(forceReload: false)
     }
 
     func retry() {
         debugLog("retry")
-        Task {
-            await loadDiscoverItems(forceReload: true)
-        }
+        runLoad(forceReload: true)
     }
 
     func showImageDetail(for item: MediaItem) {
@@ -59,6 +56,14 @@ final class DiscoverViewModel: ObservableObject {
         imageDetailViewModel = nil
     }
 
+    private func runLoad(forceReload: Bool) {
+        loadTask?.cancel()
+        loadTask = Task { [weak self] in
+            guard let self else { return }
+            await self.loadDiscoverItems(forceReload: forceReload)
+        }
+    }
+
     private func loadDiscoverItems(forceReload: Bool = false) async {
         debugLog("loadDiscoverItems begin forceReload=\(forceReload) currentItems=\(items.count) state=\(stateLabel)")
 
@@ -67,8 +72,11 @@ final class DiscoverViewModel: ObservableObject {
             debugLog("state -> loading because forceReload")
         }
 
+        guard !Task.isCancelled else { return }
+
         let cachedItems = await repository.loadCached(limit: visibleItemCount)
         debugLog("pre-prepare cachedItems=\(cachedItems.count)")
+        guard !Task.isCancelled else { return }
 
         if !cachedItems.isEmpty {
             items = cachedItems
@@ -78,6 +86,7 @@ final class DiscoverViewModel: ObservableObject {
 
         await repository.prepare()
         debugLog("repository.prepare completed")
+        guard !Task.isCancelled else { return }
 
         let cachedCount = await repository.cachedCount()
         let refreshedCachedItems = await repository.loadCached(limit: visibleItemCount)
@@ -101,14 +110,14 @@ final class DiscoverViewModel: ObservableObject {
             if shouldRefreshToday {
                 markRefreshedToday()
             }
-            Task { await fillCacheToTarget() }
+            await fillCacheToTarget()
             return
         }
 
         if shouldRefreshToday {
             debugLog("branch -> runDailyRefresh")
             markRefreshedToday()
-            Task { await runDailyRefresh() }
+            await runDailyRefresh()
         } else {
             debugLog("branch -> no fetch needed")
         }
@@ -122,8 +131,9 @@ final class DiscoverViewModel: ObservableObject {
             state = .loaded
             debugLog("bootstrapInitialItems loaded visible items count=\(items.count)")
             markRefreshedToday()
-            Task { await fillCacheToTarget() }
-        } catch {
+            await fillCacheToTarget()
+        } catch let error {
+            guard !(error is CancellationError) else { return }
             debugLog("bootstrapInitialItems failed")
             state = .error("Failed to load images. Try again.")
         }
@@ -133,6 +143,7 @@ final class DiscoverViewModel: ObservableObject {
         var attempts = 0
 
         while attempts < 5 {
+            guard !Task.isCancelled else { throw CancellationError() }
             let currentCount = await repository.cachedCount()
             debugLog("fillCache attempt=\(attempts + 1) currentCount=\(currentCount) minimum=\(minimumCount)")
             guard currentCount < minimumCount else { return }
@@ -147,12 +158,14 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     private func fillCacheToTarget() async {
+        guard !Task.isCancelled else { return }
         let shouldRefreshVisibleItems = items.count < visibleItemCount
         var stalledAttempts = 0
 
         debugLog("fillCacheToTarget begin visibleItems=\(items.count) shouldRefreshVisibleItems=\(shouldRefreshVisibleItems)")
 
         while stalledAttempts < 3 {
+            guard !Task.isCancelled else { return }
             let currentCount = await repository.cachedCount()
             debugLog("fillCacheToTarget loop currentCount=\(currentCount) target=\(targetStoredItemCount) stalledAttempts=\(stalledAttempts)")
             guard currentCount < targetStoredItemCount else { break }
@@ -178,6 +191,7 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     private func runDailyRefresh() async {
+        guard !Task.isCancelled else { return }
         debugLog("runDailyRefresh begin dailyRefreshCount=\(dailyRefreshCount)")
         do {
             try await repository.fetchAndStore(count: dailyRefreshCount)

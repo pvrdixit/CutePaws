@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 final class DiscoverRepositoryImpl: DiscoverRepository {
@@ -45,10 +44,8 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
         debugLog("fetchAndStore begin requestedCount=\(count)")
 
         var collectedItems: [MediaItem] = []
-        var seenRemoteURLs = Set<String>()
-        var seenContentFingerprints = Set(
-            await store.fetchItems(limit: .max).compactMap { contentFingerprint(at: $0.localFilePath) }
-        )
+        let existingItems = await store.fetchItems(limit: .max)
+        var seenRemoteURLs = Set(existingItems.map { $0.remoteURL.absoluteString })
         var attempts = 0
         var downloadedCount = 0
 
@@ -56,7 +53,21 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
             let remainingCount = count - collectedItems.count
             let requestCount = min(50, max(remainingCount * 3, 10))
             let urls = try await remoteDataSource.fetchImageURLs(count: requestCount)
-            let downloadedItems = await imageDownloadService.downloadImages(from: urls, maxConcurrent: 10)
+
+            // Skip URLs already present in the store to avoid redundant downloads.
+            // Also de-dupe within this batch, just in case the provider repeats URLs.
+            var seenBatch = Set<String>()
+            let urlsToDownload = urls.filter { url in
+                let key = url.absoluteString
+                return !seenRemoteURLs.contains(key) && seenBatch.insert(key).inserted
+            }
+
+            guard !urlsToDownload.isEmpty else {
+                attempts += 1
+                continue
+            }
+
+            let downloadedItems = await imageDownloadService.downloadImages(from: urlsToDownload, maxConcurrent: 10)
             downloadedCount += downloadedItems.count
             let newItems = makeMediaItems(from: downloadedItems)
             let acceptedCount = newItems.count
@@ -66,10 +77,10 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
                 let item = preparedItem.item
                 let remoteURLString = item.remoteURL.absoluteString
 
-                if seenRemoteURLs.insert(remoteURLString).inserted,
-                   seenContentFingerprints.insert(preparedItem.contentFingerprint).inserted {
+                if seenRemoteURLs.insert(remoteURLString).inserted {
                     collectedItems.append(item)
                 } else if let localFilePath = item.localFilePath {
+                    // URL already exists in the store; discard downloaded file for cleanliness.
                     mediaFileStorage.removeFile(at: localFilePath)
                     duplicateDropCount += 1
                 }
@@ -134,8 +145,7 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
                 aspectRatio: imageMetadataService.aspectRatio(from: data) ?? 1.0,
                 source: .dogCeo,
                 createdAt: Date()
-            ),
-            contentFingerprint: contentFingerprint(for: data)
+            )
         )
     }
 
@@ -152,25 +162,8 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
         print("DiscoverRepositoryImpl:", message)
         #endif
     }
-
-    private func contentFingerprint(for data: Data) -> String {
-        let digest = SHA256.hash(data: data)
-        return digest.compactMap { String(format: "%02x", $0) }.joined()
-    }
-
-    private func contentFingerprint(at path: String?) -> String? {
-        guard
-            let path,
-            let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe])
-        else {
-            return nil
-        }
-
-        return contentFingerprint(for: data)
-    }
 }
 
 private struct PreparedMediaItem {
     let item: MediaItem
-    let contentFingerprint: String
 }

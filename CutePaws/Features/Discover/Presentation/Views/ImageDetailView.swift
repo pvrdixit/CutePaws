@@ -89,7 +89,7 @@ struct ImageDetailView: View {
 
     private func hasImage(at path: String?) -> Bool {
         guard let path else { return false }
-        return UIImage(contentsOfFile: path) != nil
+        return ImageCache.shared.image(forFilePath: path) != nil
     }
 
     private var backgroundColor: Color {

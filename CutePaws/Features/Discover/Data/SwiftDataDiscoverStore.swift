@@ -45,24 +45,7 @@ final class SwiftDataDiscoverStore: DiscoverStore {
     }
 
     func fetchItemsSnapshot(limit: Int) -> [MediaItem] {
-        guard limit > 0 else { return [] }
-
-        do {
-            let descriptor = FetchDescriptor<StoredMediaItem>(
-                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-            )
-            let storedItems = try context.fetch(descriptor)
-            let items = storedItems
-                .filter(isValid)
-                .prefix(limit)
-                .compactMap(makeMediaItem(from:))
-            debugLog("fetchItemsSnapshot limit=\(limit) storedRows=\(storedItems.count) returned=\(items.count)")
-            return items
-        } catch {
-            logger.error("SwiftData snapshot fetch failed")
-            debugLog("fetchItemsSnapshot failed")
-            return []
-        }
+        fetchItemsCore(limit: limit, tag: "fetchItemsSnapshot")
     }
 
     func deleteInvalidItems() async {
@@ -71,7 +54,7 @@ final class SwiftDataDiscoverStore: DiscoverStore {
             var didDelete = false
             var deletedCount = 0
 
-            for item in storedItems where shouldDelete(item) {
+            for item in storedItems where !isValid(item) {
                 debugLog(
                     "deleteInvalidItems removing url=\(item.remoteURLString) reason=\(invalidReason(for: item)) reference=\(item.localFilePath ?? "nil") resolvedPath=\(fileStorage.filePath(for: item.localFilePath) ?? "nil")"
                 )
@@ -93,7 +76,29 @@ final class SwiftDataDiscoverStore: DiscoverStore {
     }
 
     func fetchItems(limit: Int) async -> [MediaItem] {
-        fetchItemsSnapshot(limit: limit)
+        fetchItemsCore(limit: limit, tag: "fetchItems")
+    }
+
+    private func fetchItemsCore(limit: Int, tag: String) -> [MediaItem] {
+        guard limit > 0 else { return [] }
+
+        do {
+            let descriptor = FetchDescriptor<StoredMediaItem>(
+                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            )
+            let storedItems = try context.fetch(descriptor)
+            let items = storedItems
+                .filter(isValid)
+                .prefix(limit)
+                .compactMap(makeMediaItem(from:))
+
+            debugLog("\(tag) limit=\(limit) storedRows=\(storedItems.count) returned=\(items.count)")
+            return items
+        } catch {
+            logger.error("SwiftData fetch failed", metadata: ["tag": tag])
+            debugLog("\(tag) failed")
+            return []
+        }
     }
 
     func itemCount() async -> Int {
@@ -119,7 +124,7 @@ final class SwiftDataDiscoverStore: DiscoverStore {
             var insertedCount = 0
             var duplicatePathDeletes = 0
 
-            for item in existingItems where shouldDelete(item) {
+            for item in existingItems where !isValid(item) {
                 delete(item)
             }
 
@@ -204,10 +209,6 @@ final class SwiftDataDiscoverStore: DiscoverStore {
             source: source,
             createdAt: item.createdAt
         )
-    }
-
-    private func shouldDelete(_ item: StoredMediaItem) -> Bool {
-        !isValid(item)
     }
 
     private func isValid(_ item: StoredMediaItem) -> Bool {

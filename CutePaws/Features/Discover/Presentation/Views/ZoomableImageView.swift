@@ -63,7 +63,11 @@ struct ZoomableImageView: UIViewRepresentable {
             var imageDidChange = false
 
             if currentImageID != imageID {
-                imageView.image = imagePath.flatMap(UIImage.init(contentsOfFile:))
+                if let imagePath {
+                    imageView.image = ImageCache.shared.image(forFilePath: imagePath)
+                } else {
+                    imageView.image = nil
+                }
                 currentImageID = imageID
                 lastBoundsSize = .zero
                 scrollView.zoomScale = 1.0

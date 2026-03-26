@@ -44,18 +44,22 @@ struct DiscoverView: View {
 
         case .loaded:
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 16) {
                     titleView
+                        .padding(.horizontal, 12)
+
                     DiscoverSectionView(title: "Daily Picks")
+                        .padding(.horizontal, 12)
+
                     MasonryTwoColumnGrid(
                         items: viewModel.items,
-                        availableWidth: proxy.size.width - 40,
+                        availableWidth: proxy.size.width,
+                        spacing: 8,
                         onSelect: viewModel.showImageDetail
                     )
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, max(proxy.safeAreaInsets.top + 8, 20))
-                .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 34))
+                .padding(.top, max(proxy.safeAreaInsets.top + 8, 12))
+                .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 20))
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
             .background(Color(uiColor: .systemBackground))
