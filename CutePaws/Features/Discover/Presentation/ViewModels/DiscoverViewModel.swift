@@ -16,13 +16,9 @@ final class DiscoverViewModel: ObservableObject {
 
     private var started = false
 
-    private let visibleItemCount: Int
-    private let targetStoredItemCount = 40
-    private let dailyRefreshCount = 20
-    private let lastRefreshDateKey = "discover.lastRefreshDate"
-    let spotlightLastRefreshDateKey = "spotlight.lastRefreshDate"
-    let spotlightTargetStoredItemCount = 2
-    let spotlightDailyRefreshCount = 1
+    private let dailyPicksVisibleCount: Int
+    private let dailyPicksImageLimit: Int
+    let spotlightImageLimit: Int
 
     private var loadTask: Task<Void, Never>?
     var spotlightTask: Task<Void, Never>?
@@ -33,13 +29,17 @@ final class DiscoverViewModel: ObservableObject {
         initialItems: [MediaItem] = [],
         initialSpotlightImagePath: String? = nil,
         initialSpotlightAspectRatio: Double? = nil,
-        visibleItemCount: Int = 20,
+        dailyPicksVisibleCount: Int = 20,
+        dailyPicksImageLimit: Int = 20,
+        spotlightImageLimit: Int = 2,
         userDefaults: UserDefaults = .standard,
         calendar: Calendar = .current
     ) {
         self.repository = repository
         self.spotlightRepository = spotlightRepository
-        self.visibleItemCount = visibleItemCount
+        self.dailyPicksVisibleCount = dailyPicksVisibleCount
+        self.dailyPicksImageLimit = dailyPicksImageLimit
+        self.spotlightImageLimit = spotlightImageLimit
         self.userDefaults = userDefaults
         self.calendar = calendar
         items = initialItems
@@ -89,7 +89,7 @@ final class DiscoverViewModel: ObservableObject {
         startSpotlight(forceReload: forceReload)
         guard !Task.isCancelled else { return }
 
-        let cachedItems = await repository.loadCached(limit: visibleItemCount)
+        let cachedItems = await repository.loadCached(limit: dailyPicksVisibleCount)
         debugLog("pre-prepare cachedItems=\(cachedItems.count)")
         guard !Task.isCancelled else { return }
 
@@ -104,9 +104,9 @@ final class DiscoverViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
 
         let cachedCount = await repository.cachedCount()
-        let refreshedCachedItems = await repository.loadCached(limit: visibleItemCount)
-        let shouldRefreshToday = shouldRunDailyRefresh()
-        debugLog("post-prepare cachedCount=\(cachedCount) refreshedVisible=\(refreshedCachedItems.count) shouldRefreshToday=\(shouldRefreshToday)")
+        let refreshedCachedItems = await repository.loadCached(limit: dailyPicksVisibleCount)
+        let shouldRefreshDailyPicks = shouldRunDailyRefresh(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
+        debugLog("post-prepare cachedCount=\(cachedCount) refreshedVisible=\(refreshedCachedItems.count) shouldRefreshDailyPicks=\(shouldRefreshDailyPicks)")
 
         if !refreshedCachedItems.isEmpty {
             items = refreshedCachedItems
@@ -120,16 +120,16 @@ final class DiscoverViewModel: ObservableObject {
             return
         }
 
-        if cachedCount < targetStoredItemCount {
-            debugLog("branch -> fillCacheToTarget currentCount=\(cachedCount) target=\(targetStoredItemCount)")
-            if shouldRefreshToday {
+        if cachedCount < dailyPicksImageLimit {
+            debugLog("branch -> fillCacheToTarget currentCount=\(cachedCount) target=\(dailyPicksImageLimit)")
+            if shouldRefreshDailyPicks {
                 markRefreshedToday()
             }
             await fillCacheToTarget()
             return
         }
 
-        if shouldRefreshToday {
+        if shouldRefreshDailyPicks {
             debugLog("branch -> runDailyRefresh")
             markRefreshedToday()
             await runDailyRefresh()
@@ -141,8 +141,8 @@ final class DiscoverViewModel: ObservableObject {
     private func bootstrapInitialItems() async {
         debugLog("bootstrapInitialItems begin")
         do {
-            try await fillCache(untilAtLeast: visibleItemCount)
-            items = await repository.loadCached(limit: visibleItemCount)
+            try await fillCache(untilAtLeast: dailyPicksVisibleCount)
+            items = await repository.loadCached(limit: dailyPicksVisibleCount)
             state = .loaded
             debugLog("bootstrapInitialItems loaded visible items count=\(items.count)")
             markRefreshedToday()
@@ -174,7 +174,7 @@ final class DiscoverViewModel: ObservableObject {
 
     private func fillCacheToTarget() async {
         guard !Task.isCancelled else { return }
-        let shouldRefreshVisibleItems = items.count < visibleItemCount
+        let shouldRefreshVisibleItems = items.count < dailyPicksVisibleCount
         var stalledAttempts = 0
 
         debugLog("fillCacheToTarget begin visibleItems=\(items.count) shouldRefreshVisibleItems=\(shouldRefreshVisibleItems)")
@@ -182,11 +182,11 @@ final class DiscoverViewModel: ObservableObject {
         while stalledAttempts < 3 {
             guard !Task.isCancelled else { return }
             let currentCount = await repository.cachedCount()
-            debugLog("fillCacheToTarget loop currentCount=\(currentCount) target=\(targetStoredItemCount) stalledAttempts=\(stalledAttempts)")
-            guard currentCount < targetStoredItemCount else { break }
+            debugLog("fillCacheToTarget loop currentCount=\(currentCount) target=\(dailyPicksImageLimit) stalledAttempts=\(stalledAttempts)")
+            guard currentCount < dailyPicksImageLimit else { break }
 
             do {
-                try await repository.fetchAndStore(count: min(dailyRefreshCount, targetStoredItemCount - currentCount))
+                try await repository.fetchAndStore(count: min(dailyPicksImageLimit, dailyPicksImageLimit - currentCount))
             } catch {
                 debugLog("fillCacheToTarget fetch failed")
                 return
@@ -198,7 +198,7 @@ final class DiscoverViewModel: ObservableObject {
         }
 
         if shouldRefreshVisibleItems {
-            items = await repository.loadCached(limit: visibleItemCount)
+            items = await repository.loadCached(limit: dailyPicksVisibleCount)
             debugLog("fillCacheToTarget refreshed visible items count=\(items.count)")
         }
 
@@ -207,21 +207,17 @@ final class DiscoverViewModel: ObservableObject {
 
     private func runDailyRefresh() async {
         guard !Task.isCancelled else { return }
-        debugLog("runDailyRefresh begin dailyRefreshCount=\(dailyRefreshCount)")
+        debugLog("runDailyRefresh begin dailyPicksImageLimit=\(dailyPicksImageLimit)")
         do {
-            try await repository.fetchAndStore(count: dailyRefreshCount)
-            await repository.trimToLatest(maxCount: targetStoredItemCount)
-            userDefaults.set(Date(), forKey: lastRefreshDateKey)
+            try await repository.fetchAndStore(count: dailyPicksImageLimit)
+            await repository.trimToLatest(maxCount: dailyPicksImageLimit)
+            userDefaults.set(Date(), forKey: AppDefaults.dailyPicksLastRefreshDateKey)
             let finalCount = await repository.cachedCount()
             debugLog("runDailyRefresh end finalCount=\(finalCount)")
         } catch {
             debugLog("runDailyRefresh failed")
             return
         }
-    }
-
-    private func shouldRunDailyRefresh() -> Bool {
-        shouldRunDailyRefresh(forKey: lastRefreshDateKey)
     }
 
     func shouldRunDailyRefresh(forKey key: String) -> Bool {
@@ -236,7 +232,7 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     private func markRefreshedToday() {
-        markRefreshedToday(forKey: lastRefreshDateKey)
+        markRefreshedToday(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
     }
 
     func markRefreshedToday(forKey key: String) {

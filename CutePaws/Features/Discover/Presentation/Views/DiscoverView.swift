@@ -26,6 +26,13 @@ struct DiscoverView: View {
         switch viewModel.state {
         case .loading:
             LoadingView()
+                .background {
+                    CinematicBackdrop(
+                        imagePath: viewModel.spotlightImagePath,
+                        fallbackImageName: "Featured"
+                    )
+                    .ignoresSafeArea()
+                }
 
         case .error(let message):
             ScrollView(showsIndicators: false) {
@@ -46,7 +53,13 @@ struct DiscoverView: View {
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemBackground))
+            .background {
+                CinematicBackdrop(
+                    imagePath: viewModel.spotlightImagePath,
+                    fallbackImageName: "Featured"
+                )
+                .ignoresSafeArea()
+            }
 
         case .loaded:
             ScrollView(showsIndicators: false) {
@@ -87,7 +100,13 @@ struct DiscoverView: View {
                 .padding(.bottom, proxy.safeAreaInsets.bottom)
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
-            .background(Color(uiColor: .systemBackground))
+            .background {
+                CinematicBackdrop(
+                    imagePath: viewModel.spotlightImagePath,
+                    fallbackImageName: "Featured"
+                )
+                .ignoresSafeArea()
+            }
         }
     }
 

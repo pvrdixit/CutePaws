@@ -2,8 +2,14 @@ import Foundation
 import SwiftData
 
 extension AppDependencies {
+    private enum DiscoverLimits {
+        static let dailyPicksVisibleCount = 20
+        static let dailyPicksImageLimit = 20
+        static let spotlightImageLimit = 2
+    }
+
     func makeDiscoverViewModel() -> DiscoverViewModel {
-        let initialItems = discoverStore.fetchItemsSnapshot(limit: 20)
+        let initialItems = discoverStore.fetchItemsSnapshot(limit: DiscoverLimits.dailyPicksVisibleCount)
         let initialSpotlightItem = spotlightStore.fetchItemsSnapshot(limit: 1).first
 
         #if DEBUG
@@ -16,7 +22,9 @@ extension AppDependencies {
             initialItems: initialItems,
             initialSpotlightImagePath: initialSpotlightItem?.localFilePath,
             initialSpotlightAspectRatio: initialSpotlightItem?.aspectRatio,
-            visibleItemCount: 20
+            dailyPicksVisibleCount: DiscoverLimits.dailyPicksVisibleCount,
+            dailyPicksImageLimit: DiscoverLimits.dailyPicksImageLimit,
+            spotlightImageLimit: DiscoverLimits.spotlightImageLimit
         )
     }
 

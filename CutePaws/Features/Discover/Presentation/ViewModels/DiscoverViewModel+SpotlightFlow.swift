@@ -21,23 +21,23 @@ extension DiscoverViewModel {
         }
 
         let cachedCount = await spotlightRepository.cachedCount()
-        let shouldRefreshToday = shouldRunDailyRefresh(forKey: spotlightLastRefreshDateKey)
+        let shouldRefreshToday = shouldRunDailyRefresh(forKey: AppDefaults.spotlightLastRefreshDateKey)
 
         if cachedCount == 0 {
             await bootstrapSpotlight()
             return
         }
 
-        if cachedCount < spotlightTargetStoredItemCount {
+        if cachedCount < spotlightImageLimit {
             if shouldRefreshToday {
-                markRefreshedToday(forKey: spotlightLastRefreshDateKey)
+                markRefreshedToday(forKey: AppDefaults.spotlightLastRefreshDateKey)
             }
             await fillSpotlightCacheToTarget()
             return
         }
 
         if shouldRefreshToday || forceReload {
-            markRefreshedToday(forKey: spotlightLastRefreshDateKey)
+            markRefreshedToday(forKey: AppDefaults.spotlightLastRefreshDateKey)
             await runSpotlightDailyRefresh()
         }
     }
@@ -49,7 +49,7 @@ extension DiscoverViewModel {
             let first = await spotlightRepository.loadCached(limit: 1).first
             spotlightImagePath = first?.localFilePath
             spotlightAspectRatio = first?.aspectRatio
-            markRefreshedToday(forKey: spotlightLastRefreshDateKey)
+            markRefreshedToday(forKey: AppDefaults.spotlightLastRefreshDateKey)
             await fillSpotlightCacheToTarget()
         } catch {
             debugLog("bootstrapSpotlight failed")
@@ -76,11 +76,11 @@ extension DiscoverViewModel {
         while stalledAttempts < 3 {
             guard !Task.isCancelled else { return }
             let currentCount = await spotlightRepository.cachedCount()
-            guard currentCount < spotlightTargetStoredItemCount else { break }
+            guard currentCount < spotlightImageLimit else { break }
 
             do {
                 try await spotlightRepository.fetchAndStore(
-                    count: min(spotlightDailyRefreshCount, spotlightTargetStoredItemCount - currentCount)
+                    count: min(spotlightImageLimit, spotlightImageLimit - currentCount)
                 )
             } catch {
                 return
@@ -99,8 +99,8 @@ extension DiscoverViewModel {
     func runSpotlightDailyRefresh() async {
         guard !Task.isCancelled else { return }
         do {
-            try await spotlightRepository.fetchAndStore(count: spotlightDailyRefreshCount)
-            await spotlightRepository.trimToLatest(maxCount: spotlightTargetStoredItemCount)
+            try await spotlightRepository.fetchAndStore(count: spotlightImageLimit)
+            await spotlightRepository.trimToLatest(maxCount: spotlightImageLimit)
             guard !Task.isCancelled else { return }
             let first = await spotlightRepository.loadCached(limit: 1).first
             spotlightImagePath = first?.localFilePath
