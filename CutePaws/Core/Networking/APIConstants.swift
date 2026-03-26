@@ -15,7 +15,18 @@ enum APIConstants {
     }
 
     enum RandomDog {
-        // Reserved for future media support.
-        static let videoFeedURL = URL(string: "https://random.dog/woof.json?include=mp4,webm,gif")!
+        static let scheme = "https"
+        static let host = "random.dog"
+
+        static func randomImageURL() -> URL? {
+            var components = URLComponents()
+            components.scheme = scheme
+            components.host = host
+            components.path = "/woof.json"
+            components.queryItems = [
+                URLQueryItem(name: "include", value: "jpeg,jpg,png")
+            ]
+            return components.url
+        }
     }
 }

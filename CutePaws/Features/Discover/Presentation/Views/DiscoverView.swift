@@ -61,7 +61,11 @@ struct DiscoverView: View {
                         DiscoverSectionView(title: "Spotlight")
                             .padding(.horizontal, Layout.horizontalPadding)
                     } content: {
-                        SpotlightView(onTap: viewModel.retry)
+                        SpotlightView(
+                            imagePath: viewModel.spotlightImagePath,
+                            aspectRatio: viewModel.spotlightAspectRatio,
+                            onTap: viewModel.retry
+                        )
                             .padding(.horizontal, Layout.horizontalPadding)
                     }
 

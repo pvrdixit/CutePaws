@@ -13,15 +13,18 @@ final class DefaultMediaFileStorage: MediaFileStorage {
     private let fileManager: FileManager
     private let directoryURL: URL
 
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        directoryName: String = "DiscoverMedia"
+    ) {
         self.fileManager = fileManager
         directoryURL = fileManager
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("CutePaws", isDirectory: true)
-            .appendingPathComponent("DiscoverMedia", isDirectory: true)
+            .appendingPathComponent(directoryName, isDirectory: true)
 
         #if DEBUG
-        print("Discover media storage folder:", directoryURL.path)
+        print("\(directoryName) storage folder:", directoryURL.path)
         #endif
     }
 

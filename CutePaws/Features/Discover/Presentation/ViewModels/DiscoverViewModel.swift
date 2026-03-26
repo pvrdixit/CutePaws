@@ -4,10 +4,13 @@ import Foundation
 @MainActor
 final class DiscoverViewModel: ObservableObject {
     @Published private(set) var items: [MediaItem] = []
+    @Published private(set) var spotlightImagePath: String?
+    @Published private(set) var spotlightAspectRatio: Double?
     @Published private(set) var state: DiscoverViewState = .loading
     @Published var imageDetailViewModel: ImageDetailViewModel?
 
     private let repository: DiscoverRepository
+    private let spotlightRepository: SpotlightRepository
     private let userDefaults: UserDefaults
     private let calendar: Calendar
 
@@ -17,21 +20,31 @@ final class DiscoverViewModel: ObservableObject {
     private let targetStoredItemCount = 40
     private let dailyRefreshCount = 20
     private let lastRefreshDateKey = "discover.lastRefreshDate"
+    private let spotlightLastRefreshDateKey = "spotlight.lastRefreshDate"
+    private let spotlightTargetStoredItemCount = 2
+    private let spotlightDailyRefreshCount = 1
 
     private var loadTask: Task<Void, Never>?
+    private var spotlightTask: Task<Void, Never>?
 
     init(
         repository: DiscoverRepository,
+        spotlightRepository: SpotlightRepository,
         initialItems: [MediaItem] = [],
+        initialSpotlightImagePath: String? = nil,
+        initialSpotlightAspectRatio: Double? = nil,
         visibleItemCount: Int = 20,
         userDefaults: UserDefaults = .standard,
         calendar: Calendar = .current
     ) {
         self.repository = repository
+        self.spotlightRepository = spotlightRepository
         self.visibleItemCount = visibleItemCount
         self.userDefaults = userDefaults
         self.calendar = calendar
         items = initialItems
+        spotlightImagePath = initialSpotlightImagePath
+        spotlightAspectRatio = initialSpotlightAspectRatio
         state = initialItems.isEmpty ? .loading : .loaded
     }
 
@@ -58,6 +71,7 @@ final class DiscoverViewModel: ObservableObject {
 
     private func runLoad(forceReload: Bool) {
         loadTask?.cancel()
+        spotlightTask?.cancel()
         loadTask = Task { [weak self] in
             guard let self else { return }
             await self.loadDiscoverItems(forceReload: forceReload)
@@ -72,6 +86,7 @@ final class DiscoverViewModel: ObservableObject {
             debugLog("state -> loading because forceReload")
         }
 
+        startSpotlight(forceReload: forceReload)
         guard !Task.isCancelled else { return }
 
         let cachedItems = await repository.loadCached(limit: visibleItemCount)
@@ -120,6 +135,47 @@ final class DiscoverViewModel: ObservableObject {
             await runDailyRefresh()
         } else {
             debugLog("branch -> no fetch needed")
+        }
+    }
+
+    private func startSpotlight(forceReload: Bool) {
+        spotlightTask?.cancel()
+        spotlightTask = Task { [weak self] in
+            guard let self else { return }
+            await self.loadSpotlight(forceReload: forceReload)
+        }
+    }
+
+    private func loadSpotlight(forceReload: Bool) async {
+        await spotlightRepository.prepare()
+        guard !Task.isCancelled else { return }
+
+        let cachedItems = await spotlightRepository.loadCached(limit: 1)
+        if let firstItem = cachedItems.first {
+            guard !Task.isCancelled else { return }
+            spotlightImagePath = firstItem.localFilePath
+            spotlightAspectRatio = firstItem.aspectRatio
+        }
+
+        let cachedCount = await spotlightRepository.cachedCount()
+        let shouldRefreshToday = shouldRunDailyRefresh(forKey: spotlightLastRefreshDateKey)
+
+        if cachedCount == 0 {
+            await bootstrapSpotlight()
+            return
+        }
+
+        if cachedCount < spotlightTargetStoredItemCount {
+            if shouldRefreshToday {
+                markRefreshedToday(forKey: spotlightLastRefreshDateKey)
+            }
+            await fillSpotlightCacheToTarget()
+            return
+        }
+
+        if shouldRefreshToday || forceReload {
+            markRefreshedToday(forKey: spotlightLastRefreshDateKey)
+            await runSpotlightDailyRefresh()
         }
     }
 
@@ -206,7 +262,11 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     private func shouldRunDailyRefresh() -> Bool {
-        guard let lastRefreshDate = userDefaults.object(forKey: lastRefreshDateKey) as? Date else {
+        shouldRunDailyRefresh(forKey: lastRefreshDateKey)
+    }
+
+    private func shouldRunDailyRefresh(forKey key: String) -> Bool {
+        guard let lastRefreshDate = userDefaults.object(forKey: key) as? Date else {
             debugLog("shouldRunDailyRefresh -> true (no stored date)")
             return true
         }
@@ -217,8 +277,80 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     private func markRefreshedToday() {
-        userDefaults.set(Date(), forKey: lastRefreshDateKey)
+        markRefreshedToday(forKey: lastRefreshDateKey)
+    }
+
+    private func markRefreshedToday(forKey key: String) {
+        userDefaults.set(Date(), forKey: key)
         debugLog("markRefreshedToday")
+    }
+
+    private func bootstrapSpotlight() async {
+        do {
+            try await fillSpotlightCache(untilAtLeast: 1)
+            guard !Task.isCancelled else { return }
+            let first = await spotlightRepository.loadCached(limit: 1).first
+            spotlightImagePath = first?.localFilePath
+            spotlightAspectRatio = first?.aspectRatio
+            markRefreshedToday(forKey: spotlightLastRefreshDateKey)
+            await fillSpotlightCacheToTarget()
+        } catch {
+            debugLog("bootstrapSpotlight failed")
+        }
+    }
+
+    private func fillSpotlightCache(untilAtLeast minimumCount: Int) async throws {
+        var attempts = 0
+        while attempts < 5 {
+            guard !Task.isCancelled else { throw CancellationError() }
+            let currentCount = await spotlightRepository.cachedCount()
+            guard currentCount < minimumCount else { return }
+            try await spotlightRepository.fetchAndStore(count: minimumCount - currentCount)
+            attempts += 1
+        }
+
+        if await spotlightRepository.cachedCount() < minimumCount {
+            throw URLError(.cannotLoadFromNetwork)
+        }
+    }
+
+    private func fillSpotlightCacheToTarget() async {
+        var stalledAttempts = 0
+        while stalledAttempts < 3 {
+            guard !Task.isCancelled else { return }
+            let currentCount = await spotlightRepository.cachedCount()
+            guard currentCount < spotlightTargetStoredItemCount else { break }
+
+            do {
+                try await spotlightRepository.fetchAndStore(
+                    count: min(spotlightDailyRefreshCount, spotlightTargetStoredItemCount - currentCount)
+                )
+            } catch {
+                return
+            }
+
+            let updatedCount = await spotlightRepository.cachedCount()
+            stalledAttempts = updatedCount <= currentCount ? stalledAttempts + 1 : 0
+        }
+
+        guard !Task.isCancelled else { return }
+        let first = await spotlightRepository.loadCached(limit: 1).first
+        spotlightImagePath = first?.localFilePath
+        spotlightAspectRatio = first?.aspectRatio
+    }
+
+    private func runSpotlightDailyRefresh() async {
+        guard !Task.isCancelled else { return }
+        do {
+            try await spotlightRepository.fetchAndStore(count: spotlightDailyRefreshCount)
+            await spotlightRepository.trimToLatest(maxCount: spotlightTargetStoredItemCount)
+            guard !Task.isCancelled else { return }
+            let first = await spotlightRepository.loadCached(limit: 1).first
+            spotlightImagePath = first?.localFilePath
+            spotlightAspectRatio = first?.aspectRatio
+        } catch {
+            return
+        }
     }
 
     private var stateLabel: String {

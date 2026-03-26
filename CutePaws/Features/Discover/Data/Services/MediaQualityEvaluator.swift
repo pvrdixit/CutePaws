@@ -11,8 +11,18 @@ struct MediaQualityEvaluator {
     static let minAspectRatio: CGFloat = 0.5
     static let maxAspectRatio: CGFloat = 2.0
 
-    static func isAcceptableImage(data: Data) -> Bool {
+    static let spotlightMinFileSize = 500_000
+    static let spotlightMaxFileSize = 2_000_000
 
+    static func isFileSizeWithinLimits(_ bytes: Int, min: Int, max: Int) -> Bool {
+        bytes >= min && bytes <= max
+    }
+
+    static func isAcceptableSpotlightFileSize(_ bytes: Int) -> Bool {
+        isFileSizeWithinLimits(bytes, min: spotlightMinFileSize, max: spotlightMaxFileSize)
+    }
+
+    static func isAcceptableImage(data: Data) -> Bool {
         // File size check
         guard data.count >= minFileSize,
               data.count <= maxFileSize else {
