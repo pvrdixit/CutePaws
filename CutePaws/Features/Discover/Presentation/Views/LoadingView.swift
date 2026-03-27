@@ -6,14 +6,7 @@ struct LoadingView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.12),
-                    Color.appBackground
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            AppBackgroundView()
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
@@ -25,7 +18,7 @@ struct LoadingView: View {
                         .opacity(isFilled ? 1 : 0)
                 }
                 .font(.system(size: 48))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.accent)
                 .frame(width: 72, height: 72)
                 .scaleEffect(breathe ? 1.02 : 0.98)
                 .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: breathe)

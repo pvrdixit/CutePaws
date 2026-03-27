@@ -7,7 +7,7 @@ struct FavoritesView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.appBackground.ignoresSafeArea()
+            AppBackgroundView().ignoresSafeArea()
 
             if viewModel.items.isEmpty {
                 EmptyStateView(

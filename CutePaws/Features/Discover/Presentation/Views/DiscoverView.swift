@@ -29,6 +29,10 @@ struct DiscoverView: View {
         switch viewModel.state {
         case .loading:
             LoadingView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    AppBackgroundView().ignoresSafeArea()
+                }
 
         case .error(let message):
             ScrollView(showsIndicators: false) {
@@ -49,7 +53,9 @@ struct DiscoverView: View {
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.appBackground)
+            .background {
+                AppBackgroundView().ignoresSafeArea()
+            }
 
         case .loaded:
             ScrollView(showsIndicators: false) {
@@ -90,7 +96,9 @@ struct DiscoverView: View {
                 .padding(.bottom, proxy.safeAreaInsets.bottom)
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
-            .background(Color.appBackground)
+            .background {
+                AppBackgroundView().ignoresSafeArea()
+            }
         }
     }
 
@@ -106,10 +114,9 @@ struct DiscoverView: View {
     private var exploreButton: some View {
         Button(action: {}) {
             Label("Explore breeds", systemImage: "sparkles")
-                .foregroundStyle(.primary)
+                .foregroundStyle(.accent)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .font(.custom("Didot", size: 13))
+                .font(.custom("Didot Bold", size: 13))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.ultraThinMaterial, in: Capsule())
@@ -120,8 +127,8 @@ struct DiscoverView: View {
     private var favoritesButton: some View {
         Button(action: viewModel.showFavorites) {
             Image(systemName: "heart.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.accent)
                 .frame(width: 36, height: 36)
                 .background(.ultraThinMaterial, in: Circle())
         }

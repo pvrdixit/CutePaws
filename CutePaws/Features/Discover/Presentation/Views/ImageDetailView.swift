@@ -6,7 +6,7 @@ struct ImageDetailView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.appBackground.ignoresSafeArea()
+            AppBackgroundView().ignoresSafeArea()
 
             DetailImagePagerView(
                 items: viewModel.items,
