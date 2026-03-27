@@ -19,6 +19,9 @@ struct DiscoverView: View {
         .fullScreenCover(item: $viewModel.imageDetailViewModel, onDismiss: viewModel.dismissImageDetail) { imageDetailViewModel in
             ImageDetailView(viewModel: imageDetailViewModel)
         }
+        .fullScreenCover(item: $viewModel.favoritesViewModel, onDismiss: viewModel.dismissFavoritesView) { favoritesViewModel in
+            FavoritesView(viewModel: favoritesViewModel)
+        }
     }
 
     @ViewBuilder
@@ -64,7 +67,7 @@ struct DiscoverView: View {
                         SpotlightView(
                             imagePath: viewModel.spotlightImagePath,
                             aspectRatio: viewModel.spotlightAspectRatio,
-                            onTap: viewModel.retry
+                            onTap: viewModel.showSpotlightImageDetail
                         )
                             .padding(.horizontal, Layout.horizontalPadding)
                     }
@@ -92,7 +95,37 @@ struct DiscoverView: View {
     }
 
     private var titleView: some View {
-        DiscoverTitleView(title: "Discover")
+        HStack(spacing: 12) {
+            DiscoverTitleView(title: "Discover")
+            Spacer()
+            exploreButton
+            favoritesButton
+        }
+    }
+
+    private var exploreButton: some View {
+        Button(action: {}) {
+            Label("Explore breeds", systemImage: "sparkles")
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .font(.custom("Didot", size: 13))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var favoritesButton: some View {
+        Button(action: viewModel.showFavorites) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 36, height: 36)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Section builder
@@ -106,7 +139,14 @@ struct DiscoverView: View {
     }
 }
 
-#Preview {
+#Preview("DiscoverView Light") {
     let dependencies = AppDependencies()
     return DiscoverView(viewModel: dependencies.makeDiscoverViewModel())
+        .preferredColorScheme(.light)
+}
+
+#Preview("DiscoverView Dark") {
+    let dependencies = AppDependencies()
+    return DiscoverView(viewModel: dependencies.makeDiscoverViewModel())
+        .preferredColorScheme(.dark)
 }

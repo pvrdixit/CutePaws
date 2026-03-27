@@ -1,6 +1,4 @@
 import SwiftUI
-import UIKit
-
 struct ImageDetailView: View {
     @ObservedObject var viewModel: ImageDetailViewModel
     @Environment(\.dismiss) private var dismiss
@@ -10,99 +8,53 @@ struct ImageDetailView: View {
         ZStack(alignment: .top) {
             Color.appBackground.ignoresSafeArea()
 
-            TabView(selection: $viewModel.selectedIndex) {
-                ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
-                    imagePage(for: item)
-                        .tag(index)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 20)
-                    .onEnded { value in
-                        guard !isCurrentImageZoomed else { return }
-                        guard value.translation.height > 120 else { return }
-                        guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                        dismiss()
-                    }
+            DetailImagePagerView(
+                items: viewModel.items,
+                selectedIndex: $viewModel.selectedIndex,
+                currentItemID: viewModel.currentItem?.id,
+                isCurrentImageZoomed: $isCurrentImageZoomed,
+                onDismiss: dismiss.callAsFunction
             )
 
-            header
+            ImageDetailHeaderView(
+                displayName: viewModel.currentDisplayName,
+                positionText: viewModel.positionText,
+                showDisplayName: viewModel.shouldShowDisplayName,
+                isFavorite: viewModel.isCurrentFavorite,
+                onFavoriteTap: viewModel.toggleFavorite,
+                onCloseTap: dismiss.callAsFunction
+            )
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
         }
+        .onAppear {
+            viewModel.refreshFavoriteState()
+        }
         .onChange(of: viewModel.selectedIndex) { _, _ in
             isCurrentImageZoomed = false
+            viewModel.refreshFavoriteState()
         }
         .statusBarHidden()
-    }
-
-    private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.currentBreedName)
-                    .font(.headline)
-                    .foregroundStyle(headerForegroundColor)
-
-                Text(viewModel.positionText)
-                    .font(.caption)
-                    .foregroundStyle(headerForegroundColor.opacity(0.72))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-            Spacer()
-            
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(headerForegroundColor)
-                    .frame(width: 36, height: 36)
-                    .background(.regularMaterial)
-                    .clipShape(Circle())
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func imagePage(for item: MediaItem) -> some View {
-        if hasImage(at: item.localFilePath) {
-            ZoomableImageView(
-                imagePath: item.localFilePath,
-                imageID: item.id,
-                isSelected: viewModel.currentItem?.id == item.id
-            ) { isZoomed in
-                if viewModel.currentItem?.id == item.id {
-                    isCurrentImageZoomed = isZoomed
-                }
-            }
-            .ignoresSafeArea()
-        } else {
-            ContentUnavailableView("Image unavailable", systemImage: "photo")
-                .foregroundStyle(emptyStateForegroundColor)
-        }
-    }
-
-    private func hasImage(at path: String?) -> Bool {
-        guard let path else { return false }
-        return ImageCache.shared.image(forFilePath: path) != nil
-    }
-
-    private var headerForegroundColor: Color {
-        Color(uiColor: .label)
-    }
-
-    private var emptyStateForegroundColor: Color {
-        Color(uiColor: .secondaryLabel)
     }
 }
 
 #Preview {
-    let items = PreviewData.mediaItems
+    let dependencies = AppDependencies()
+    let items = PreviewData.mediaItems.map {
+        DetailMediaItem(
+            id: $0.id,
+            sourceID: $0.id,
+            displayName: "Dog",
+            mediaType: .photo,
+            imagePath: $0.localFilePath
+        )
+    }
     return ImageDetailView(
-        viewModel: ImageDetailViewModel(items: items, selectedItemID: items[0].id)
-    )
+        viewModel: ImageDetailViewModel(
+            items: items,
+            selectedItemID: items[0].id,
+            flow: .dailyPicks,
+            favoriteRepository: dependencies.favoriteRepository
+        )
+    ).preferredColorScheme(.dark)
 }

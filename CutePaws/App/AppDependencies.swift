@@ -7,6 +7,7 @@ final class AppDependencies {
     let httpUtility: HTTPUtility
     let discoverModelContainer: ModelContainer
     let spotlightModelContainer: ModelContainer
+    let favoritesModelContainer: ModelContainer
 
     init() {
         logger = AppLogger(subsystem: Bundle.main.bundleIdentifier ?? "CutePaws")
@@ -18,10 +19,13 @@ final class AppDependencies {
             let discoverConfiguration = ModelConfiguration(url: discoverStoreURL)
             let spotlightStoreURL = applicationSupportURL.appendingPathComponent("spotlight.store")
             let spotlightConfiguration = ModelConfiguration(url: spotlightStoreURL)
+            let favoritesStoreURL = applicationSupportURL.appendingPathComponent("favorites.store")
+            let favoritesConfiguration = ModelConfiguration(url: favoritesStoreURL)
 
             #if DEBUG
             print("SwiftData discover store path:", discoverStoreURL.path)
             print("SwiftData spotlight store path:", spotlightStoreURL.path)
+            print("SwiftData favorites store path:", favoritesStoreURL.path)
             #endif
 
             discoverModelContainer = try ModelContainer(
@@ -31,6 +35,10 @@ final class AppDependencies {
             spotlightModelContainer = try ModelContainer(
                 for: StoredSpotlightItem.self,
                 configurations: spotlightConfiguration
+            )
+            favoritesModelContainer = try ModelContainer(
+                for: StoredFavoriteItem.self,
+                configurations: favoritesConfiguration
             )
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
@@ -47,11 +55,16 @@ final class AppDependencies {
         fileStorage: spotlightMediaFileStorage,
         logger: logger
     )
+    lazy var favoriteStore = SwiftDataFavoriteStore(
+        container: favoritesModelContainer,
+        fileStorage: favoritesMediaFileStorage
+    )
 
     private lazy var imageDownloadService = ImageDownloadService(httpUtility: httpUtility)
     private lazy var imageMetadataService: ImageMetadataService = DefaultImageMetadataService()
     private lazy var mediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "DailyPicks")
     private lazy var spotlightMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "SpotlightMedia")
+    private lazy var favoritesMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "Favorites")
     private lazy var dogCeoRemoteDataSource = DogCeoRemoteDataSource(httpUtility: httpUtility)
     private lazy var randomDogRemoteDataSource = RandomDogRemoteDataSource(httpUtility: httpUtility)
 
@@ -71,5 +84,10 @@ final class AppDependencies {
         mediaFileStorage: spotlightMediaFileStorage,
         store: spotlightStore,
         logger: logger
+    )
+
+    lazy var favoriteRepository: FavoriteRepository = FavoriteRepositoryImpl(
+        store: favoriteStore,
+        mediaFileStorage: favoritesMediaFileStorage
     )
 }

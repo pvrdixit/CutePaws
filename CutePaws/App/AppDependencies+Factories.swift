@@ -19,6 +19,7 @@ extension AppDependencies {
         return DiscoverViewModel(
             repository: discoverRepository,
             spotlightRepository: spotlightRepository,
+            favoriteRepository: favoriteRepository,
             initialItems: initialItems,
             initialSpotlightImagePath: initialSpotlightItem?.localFilePath,
             initialSpotlightAspectRatio: initialSpotlightItem?.aspectRatio,

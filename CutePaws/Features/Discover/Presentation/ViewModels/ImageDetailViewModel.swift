@@ -4,23 +4,36 @@ import Foundation
 @MainActor
 final class ImageDetailViewModel: ObservableObject, Identifiable {
     let id = UUID()
-    let items: [MediaItem]
+    private let favoriteRepository: FavoriteRepository
+    private let flow: ImageDetailFlow
 
+    @Published private(set) var items: [DetailMediaItem]
     @Published var selectedIndex: Int
+    @Published var isCurrentFavorite = false
 
-    init(items: [MediaItem], selectedItemID: String) {
+    init(
+        items: [DetailMediaItem],
+        selectedItemID: String,
+        flow: ImageDetailFlow,
+        favoriteRepository: FavoriteRepository
+    ) {
         self.items = items
+        self.flow = flow
+        self.favoriteRepository = favoriteRepository
         selectedIndex = items.firstIndex { $0.id == selectedItemID } ?? 0
     }
 
-    var currentItem: MediaItem? {
+    var currentItem: DetailMediaItem? {
         guard items.indices.contains(selectedIndex) else { return nil }
         return items[selectedIndex]
     }
 
-    var currentBreedName: String {
-        guard let currentItem else { return "Dog" }
-        return Self.breedName(from: currentItem.remoteURL)
+    var currentDisplayName: String {
+        currentItem?.displayName ?? "Dog"
+    }
+
+    var shouldShowDisplayName: Bool {
+        flow != .spotlight
     }
 
     var positionText: String {
@@ -28,17 +41,50 @@ final class ImageDetailViewModel: ObservableObject, Identifiable {
         return "\(selectedIndex + 1) of \(items.count)"
     }
 
-    private static func breedName(from url: URL) -> String {
-        guard
-            let breedsIndex = url.pathComponents.firstIndex(of: "breeds"),
-            url.pathComponents.indices.contains(breedsIndex + 1)
-        else {
-            return "Dog"
+    func refreshFavoriteState() {
+        guard let sourceID = currentItem?.sourceID else {
+            isCurrentFavorite = false
+            return
         }
+        Task { [weak self] in
+            guard let self else { return }
+            let isFavorite = await favoriteRepository.isFavorite(sourceID: sourceID)
+            guard !Task.isCancelled else { return }
+            self.isCurrentFavorite = isFavorite
+        }
+    }
 
-        return url.pathComponents[breedsIndex + 1]
-            .split(separator: "-")
-            .map { $0.capitalized }
-            .joined(separator: " ")
+    func toggleFavorite() {
+        guard currentItem != nil else { return }
+        if isCurrentFavorite {
+            removeCurrentFromFavorites()
+            return
+        }
+        addCurrentToFavorites()
+    }
+
+    private func addCurrentToFavorites() {
+        guard let currentItem else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            await favoriteRepository.addFavorite(
+                sourceID: currentItem.sourceID,
+                displayName: currentItem.displayName,
+                mediaType: currentItem.mediaType,
+                sourceFilePath: currentItem.imagePath
+            )
+            guard !Task.isCancelled else { return }
+            self.isCurrentFavorite = true
+        }
+    }
+
+    private func removeCurrentFromFavorites() {
+        guard let currentItem else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            await favoriteRepository.removeFavorite(sourceID: currentItem.sourceID)
+            guard !Task.isCancelled else { return }
+            isCurrentFavorite = false
+        }
     }
 }

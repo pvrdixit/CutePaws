@@ -8,9 +8,11 @@ final class DiscoverViewModel: ObservableObject {
     @Published var spotlightAspectRatio: Double?
     @Published private(set) var state: DiscoverViewState = .loading
     @Published var imageDetailViewModel: ImageDetailViewModel?
+    @Published var favoritesViewModel: FavoritesViewModel?
 
     private let repository: DiscoverRepository
     let spotlightRepository: SpotlightRepository
+    private let favoriteRepository: FavoriteRepository
     let userDefaults: UserDefaults
     let calendar: Calendar
 
@@ -26,6 +28,7 @@ final class DiscoverViewModel: ObservableObject {
     init(
         repository: DiscoverRepository,
         spotlightRepository: SpotlightRepository,
+        favoriteRepository: FavoriteRepository,
         initialItems: [MediaItem] = [],
         initialSpotlightImagePath: String? = nil,
         initialSpotlightAspectRatio: Double? = nil,
@@ -37,6 +40,7 @@ final class DiscoverViewModel: ObservableObject {
     ) {
         self.repository = repository
         self.spotlightRepository = spotlightRepository
+        self.favoriteRepository = favoriteRepository
         self.dailyPicksVisibleCount = dailyPicksVisibleCount
         self.dailyPicksImageLimit = dailyPicksImageLimit
         self.spotlightImageLimit = spotlightImageLimit
@@ -62,11 +66,58 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     func showImageDetail(for item: MediaItem) {
-        imageDetailViewModel = ImageDetailViewModel(items: items, selectedItemID: item.id)
+        let detailItems = items.map {
+            DetailMediaItem(
+                id: $0.id,
+                sourceID: $0.id,
+                displayName: Self.breedName(from: $0.remoteURL),
+                mediaType: Self.mediaType(from: $0.remoteURL),
+                imagePath: $0.localFilePath
+            )
+        }
+        imageDetailViewModel = ImageDetailViewModel(
+            items: detailItems,
+            selectedItemID: item.id,
+            flow: .dailyPicks,
+            favoriteRepository: favoriteRepository
+        )
+    }
+
+    func showSpotlightImageDetail() {
+        Task { [weak self] in
+            guard let self else { return }
+            let spotlightItems = await spotlightRepository.loadCached(limit: spotlightImageLimit)
+            guard !spotlightItems.isEmpty else { return }
+
+            let detailItems = spotlightItems.map {
+                DetailMediaItem(
+                    id: $0.id,
+                    sourceID: $0.id,
+                    displayName: "",
+                    mediaType: Self.mediaType(from: $0.remoteURL),
+                    imagePath: $0.localFilePath
+                )
+            }
+            let selectedID = spotlightItems.last?.id ?? spotlightItems[0].id
+            imageDetailViewModel = ImageDetailViewModel(
+                items: detailItems,
+                selectedItemID: selectedID,
+                flow: .spotlight,
+                favoriteRepository: favoriteRepository
+            )
+        }
+    }
+
+    func showFavorites() {
+        favoritesViewModel = FavoritesViewModel(favoriteRepository: favoriteRepository)
     }
 
     func dismissImageDetail() {
         imageDetailViewModel = nil
+    }
+
+    func dismissFavoritesView() {
+        favoritesViewModel = nil
     }
 
     private func runLoad(forceReload: Bool) {
@@ -255,5 +306,30 @@ final class DiscoverViewModel: ObservableObject {
         #if DEBUG
         print("DiscoverViewModel:", message)
         #endif
+    }
+
+    private static func breedName(from url: URL) -> String {
+        guard
+            let breedsIndex = url.pathComponents.firstIndex(of: "breeds"),
+            url.pathComponents.indices.contains(breedsIndex + 1)
+        else {
+            return "Dog"
+        }
+
+        return url.pathComponents[breedsIndex + 1]
+            .split(separator: "-")
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+
+    private static func mediaType(from url: URL) -> FavoriteMediaType {
+        let ext = url.pathExtension.lowercased()
+        if ext == "gif" {
+            return .gif
+        }
+        if ["mp4", "mov", "m4v", "avi", "webm"].contains(ext) {
+            return .video
+        }
+        return .photo
     }
 }
