@@ -7,7 +7,8 @@ final class HTTPUtility: @unchecked Sendable {
     init(timeout: TimeInterval) {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = timeout
-        configuration.timeoutIntervalForResource = timeout
+        configuration.timeoutIntervalForResource = max(timeout, 300)
+        configuration.waitsForConnectivity = true
 
         session = URLSession(configuration: configuration)
         decoder = JSONDecoder()

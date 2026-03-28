@@ -1,0 +1,359 @@
+import Combine
+import Foundation
+
+@MainActor
+final class DiscoverViewModel: ObservableObject {
+    @Published private(set) var items: [MediaItem] = []
+    @Published var miniMoments: [MiniMomentItem] = []
+    @Published var gifs: [AnimatedGifItem] = []
+    @Published var spotlightImagePath: String?
+    @Published var spotlightAspectRatio: Double?
+    @Published private(set) var state: DiscoverViewState = .loading
+    @Published var imageDetailViewModel: ImageDetailViewModel?
+    @Published var favoritesViewModel: FavoritesViewModel?
+
+    private let repository: DiscoverRepository
+    let spotlightRepository: SpotlightRepository
+    let miniMomentRepository: MiniMomentRepository
+    let animatedGifRepository: AnimatedGifRepository
+    private let favoriteRepository: FavoriteRepository
+    let userDefaults: UserDefaults
+    let calendar: Calendar
+
+    private var started = false
+
+    private let dailyPicksVisibleCount: Int
+    private let dailyPicksImageLimit: Int
+    let spotlightImageLimit: Int
+    let miniMomentsImageLimit: Int
+    let gifsImageLimit: Int
+
+    private var loadTask: Task<Void, Never>?
+    var spotlightTask: Task<Void, Never>?
+    var miniMomentsTask: Task<Void, Never>?
+    var gifsTask: Task<Void, Never>?
+
+    init(
+        repository: DiscoverRepository,
+        spotlightRepository: SpotlightRepository,
+        miniMomentRepository: MiniMomentRepository,
+        animatedGifRepository: AnimatedGifRepository,
+        favoriteRepository: FavoriteRepository,
+        initialItems: [MediaItem] = [],
+        initialSpotlightImagePath: String? = nil,
+        initialSpotlightAspectRatio: Double? = nil,
+        initialMiniMoments: [MiniMomentItem] = [],
+        initialGifs: [AnimatedGifItem] = [],
+        dailyPicksVisibleCount: Int = 20,
+        dailyPicksImageLimit: Int = 20,
+        spotlightImageLimit: Int = 2,
+        miniMomentsImageLimit: Int = 1,
+        gifsImageLimit: Int = 1,
+        userDefaults: UserDefaults = .standard,
+        calendar: Calendar = .current
+    ) {
+        self.repository = repository
+        self.spotlightRepository = spotlightRepository
+        self.miniMomentRepository = miniMomentRepository
+        self.animatedGifRepository = animatedGifRepository
+        self.favoriteRepository = favoriteRepository
+        self.dailyPicksVisibleCount = dailyPicksVisibleCount
+        self.dailyPicksImageLimit = dailyPicksImageLimit
+        self.spotlightImageLimit = spotlightImageLimit
+        self.miniMomentsImageLimit = miniMomentsImageLimit
+        self.gifsImageLimit = gifsImageLimit
+        self.userDefaults = userDefaults
+        self.calendar = calendar
+        items = initialItems
+        miniMoments = initialMiniMoments
+        gifs = initialGifs
+        spotlightImagePath = initialSpotlightImagePath
+        spotlightAspectRatio = initialSpotlightAspectRatio
+        state = initialItems.isEmpty ? .loading : .loaded
+    }
+
+    func start() {
+        guard !started else { return }
+        started = true
+
+        debugLog("start items=\(items.count) state=\(stateLabel)")
+        runLoad(forceReload: false)
+    }
+
+    func retry() {
+        debugLog("retry")
+        runLoad(forceReload: true)
+    }
+
+    func showImageDetail(for item: MediaItem) {
+        let detailItems = items.map {
+            DetailMediaItem(
+                id: $0.id,
+                sourceID: $0.id,
+                displayName: Self.breedName(from: $0.remoteURL),
+                mediaType: Self.mediaType(from: $0.remoteURL),
+                imagePath: $0.localFilePath
+            )
+        }
+        imageDetailViewModel = ImageDetailViewModel(
+            items: detailItems,
+            selectedItemID: item.id,
+            flow: .dailyPicks,
+            favoriteRepository: favoriteRepository
+        )
+    }
+
+    func showSpotlightImageDetail() {
+        Task { [weak self] in
+            guard let self else { return }
+            let spotlightItems = await spotlightRepository.loadCached(limit: spotlightImageLimit)
+            guard !spotlightItems.isEmpty else { return }
+
+            let detailItems = spotlightItems.map {
+                DetailMediaItem(
+                    id: $0.id,
+                    sourceID: $0.id,
+                    displayName: "",
+                    mediaType: Self.mediaType(from: $0.remoteURL),
+                    imagePath: $0.localFilePath
+                )
+            }
+            let selectedID = spotlightItems.last?.id ?? spotlightItems[0].id
+            imageDetailViewModel = ImageDetailViewModel(
+                items: detailItems,
+                selectedItemID: selectedID,
+                flow: .spotlight,
+                favoriteRepository: favoriteRepository
+            )
+        }
+    }
+
+    func showFavorites() {
+        favoritesViewModel = FavoritesViewModel(favoriteRepository: favoriteRepository)
+    }
+
+    func dismissImageDetail() {
+        imageDetailViewModel = nil
+    }
+
+    func dismissFavoritesView() {
+        favoritesViewModel = nil
+    }
+
+    private func runLoad(forceReload: Bool) {
+        loadTask?.cancel()
+        spotlightTask?.cancel()
+        miniMomentsTask?.cancel()
+        gifsTask?.cancel()
+        loadTask = Task { [weak self] in
+            guard let self else { return }
+            await self.loadDiscoverItems(forceReload: forceReload)
+        }
+    }
+
+    private func loadDiscoverItems(forceReload: Bool = false) async {
+        debugLog("loadDiscoverItems begin forceReload=\(forceReload) currentItems=\(items.count) state=\(stateLabel)")
+
+        if forceReload {
+            state = .loading
+            debugLog("state -> loading because forceReload")
+        }
+
+        startSpotlight(forceReload: forceReload)
+        startMiniMoments(forceReload: forceReload)
+        startGifs(forceReload: forceReload)
+        guard !Task.isCancelled else { return }
+
+        let cachedItems = await repository.loadCached(limit: dailyPicksVisibleCount)
+        debugLog("pre-prepare cachedItems=\(cachedItems.count)")
+        guard !Task.isCancelled else { return }
+
+        if !cachedItems.isEmpty {
+            items = cachedItems
+            state = .loaded
+            debugLog("applied pre-prepare cached items count=\(cachedItems.count)")
+        }
+
+        await repository.prepare()
+        debugLog("repository.prepare completed")
+        guard !Task.isCancelled else { return }
+
+        let cachedCount = await repository.cachedCount()
+        let refreshedCachedItems = await repository.loadCached(limit: dailyPicksVisibleCount)
+        let shouldRefreshDailyPicks = shouldRunDailyRefresh(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
+        debugLog("post-prepare cachedCount=\(cachedCount) refreshedVisible=\(refreshedCachedItems.count) shouldRefreshDailyPicks=\(shouldRefreshDailyPicks)")
+
+        if !refreshedCachedItems.isEmpty {
+            items = refreshedCachedItems
+            state = .loaded
+            debugLog("applied post-prepare cached items count=\(refreshedCachedItems.count)")
+        }
+
+        if cachedCount == 0 {
+            debugLog("branch -> bootstrapInitialItems")
+            await bootstrapInitialItems()
+            return
+        }
+
+        if cachedCount < dailyPicksImageLimit {
+            debugLog("branch -> fillCacheToTarget currentCount=\(cachedCount) target=\(dailyPicksImageLimit)")
+            if shouldRefreshDailyPicks {
+                markRefreshedToday()
+            }
+            await fillCacheToTarget()
+            return
+        }
+
+        if shouldRefreshDailyPicks {
+            debugLog("branch -> runDailyRefresh")
+            markRefreshedToday()
+            await runDailyRefresh()
+        } else {
+            debugLog("branch -> no fetch needed")
+        }
+    }
+
+    private func bootstrapInitialItems() async {
+        debugLog("bootstrapInitialItems begin")
+        do {
+            try await fillCache(untilAtLeast: dailyPicksVisibleCount)
+            items = await repository.loadCached(limit: dailyPicksVisibleCount)
+            state = .loaded
+            debugLog("bootstrapInitialItems loaded visible items count=\(items.count)")
+            markRefreshedToday()
+            await fillCacheToTarget()
+        } catch let error {
+            guard !(error is CancellationError) else { return }
+            debugLog("bootstrapInitialItems failed")
+            state = .error("Failed to load images. Try again.")
+        }
+    }
+
+    private func fillCache(untilAtLeast minimumCount: Int) async throws {
+        var attempts = 0
+
+        while attempts < 5 {
+            guard !Task.isCancelled else { throw CancellationError() }
+            let currentCount = await repository.cachedCount()
+            debugLog("fillCache attempt=\(attempts + 1) currentCount=\(currentCount) minimum=\(minimumCount)")
+            guard currentCount < minimumCount else { return }
+
+            try await repository.fetchAndStore(count: minimumCount - currentCount)
+            attempts += 1
+        }
+
+        if await repository.cachedCount() < minimumCount {
+            throw URLError(.cannotLoadFromNetwork)
+        }
+    }
+
+    private func fillCacheToTarget() async {
+        guard !Task.isCancelled else { return }
+        let shouldRefreshVisibleItems = items.count < dailyPicksVisibleCount
+        var stalledAttempts = 0
+
+        debugLog("fillCacheToTarget begin visibleItems=\(items.count) shouldRefreshVisibleItems=\(shouldRefreshVisibleItems)")
+
+        while stalledAttempts < 3 {
+            guard !Task.isCancelled else { return }
+            let currentCount = await repository.cachedCount()
+            debugLog("fillCacheToTarget loop currentCount=\(currentCount) target=\(dailyPicksImageLimit) stalledAttempts=\(stalledAttempts)")
+            guard currentCount < dailyPicksImageLimit else { break }
+
+            do {
+                try await repository.fetchAndStore(count: min(dailyPicksImageLimit, dailyPicksImageLimit - currentCount))
+            } catch {
+                debugLog("fillCacheToTarget fetch failed")
+                return
+            }
+
+            let updatedCount = await repository.cachedCount()
+            debugLog("fillCacheToTarget updatedCount=\(updatedCount)")
+            stalledAttempts = updatedCount <= currentCount ? stalledAttempts + 1 : 0
+        }
+
+        if shouldRefreshVisibleItems {
+            items = await repository.loadCached(limit: dailyPicksVisibleCount)
+            debugLog("fillCacheToTarget refreshed visible items count=\(items.count)")
+        }
+
+        debugLog("fillCacheToTarget end")
+    }
+
+    private func runDailyRefresh() async {
+        guard !Task.isCancelled else { return }
+        debugLog("runDailyRefresh begin dailyPicksImageLimit=\(dailyPicksImageLimit)")
+        do {
+            try await repository.fetchAndStore(count: dailyPicksImageLimit)
+            await repository.trimToLatest(maxCount: dailyPicksImageLimit)
+            userDefaults.set(Date(), forKey: AppDefaults.dailyPicksLastRefreshDateKey)
+            let finalCount = await repository.cachedCount()
+            debugLog("runDailyRefresh end finalCount=\(finalCount)")
+        } catch {
+            debugLog("runDailyRefresh failed")
+            return
+        }
+    }
+
+    func shouldRunDailyRefresh(forKey key: String) -> Bool {
+        guard let lastRefreshDate = userDefaults.object(forKey: key) as? Date else {
+            debugLog("shouldRunDailyRefresh -> true (no stored date)")
+            return true
+        }
+
+        let result = !calendar.isDate(lastRefreshDate, inSameDayAs: Date())
+        debugLog("shouldRunDailyRefresh lastRefreshDate=\(lastRefreshDate) result=\(result)")
+        return result
+    }
+
+    private func markRefreshedToday() {
+        markRefreshedToday(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
+    }
+
+    func markRefreshedToday(forKey key: String) {
+        userDefaults.set(Date(), forKey: key)
+        debugLog("markRefreshedToday")
+    }
+
+    private var stateLabel: String {
+        switch state {
+        case .loading:
+            "loading"
+        case .loaded:
+            "loaded"
+        case .error:
+            "error"
+        }
+    }
+
+    func debugLog(_ message: String) {
+        #if DEBUG
+        print("DiscoverViewModel:", message)
+        #endif
+    }
+
+    private static func breedName(from url: URL) -> String {
+        guard
+            let breedsIndex = url.pathComponents.firstIndex(of: "breeds"),
+            url.pathComponents.indices.contains(breedsIndex + 1)
+        else {
+            return "Dog"
+        }
+
+        return url.pathComponents[breedsIndex + 1]
+            .split(separator: "-")
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+
+    private static func mediaType(from url: URL) -> FavoriteMediaType {
+        let ext = url.pathExtension.lowercased()
+        if ext == "gif" {
+            return .gif
+        }
+        if ["mp4", "mov", "m4v", "avi", "webm"].contains(ext) {
+            return .video
+        }
+        return .photo
+    }
+}

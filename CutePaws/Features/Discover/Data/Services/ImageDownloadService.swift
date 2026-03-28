@@ -6,6 +6,8 @@ protocol ImageDownloading {
 
 final class ImageDownloadService: ImageDownloading {
     private let httpUtility: HTTPUtility
+    private let mediaRequestTimeout: TimeInterval = 120
+    private let maxAttempts = 3
 
     init(httpUtility: HTTPUtility) {
         self.httpUtility = httpUtility
@@ -26,14 +28,36 @@ final class ImageDownloadService: ImageDownloading {
                         return nil
                     }
 
-                    do {
-                        let data = try await httpUtility.requestData(with: URLRequest(url: url))
-                        await semaphore.release()
-                        return (url, data)
-                    } catch {
-                        await semaphore.release()
-                        return nil
+                    var lastError: Error?
+                    for attempt in 1...self.maxAttempts {
+                        var request = URLRequest(url: url)
+                        request.timeoutInterval = self.mediaRequestTimeout
+                        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+                        do {
+                            let data = try await httpUtility.requestData(with: request)
+                            await semaphore.release()
+                            return (url, data)
+                        } catch {
+                            lastError = error
+                            if attempt < self.maxAttempts {
+                                try? await Task.sleep(for: .milliseconds(400 * attempt))
+                            }
+                        }
                     }
+
+                    #if DEBUG
+                    if let lastError {
+                        debugPrint(
+                            "ImageDownloadService: giving up url=",
+                            url.absoluteString,
+                            "error=",
+                            String(describing: lastError)
+                        )
+                    }
+                    #endif
+                    await semaphore.release()
+                    return nil
                 }
             }
 
