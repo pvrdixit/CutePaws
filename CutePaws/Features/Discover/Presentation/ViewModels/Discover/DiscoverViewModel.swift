@@ -5,7 +5,6 @@ import Foundation
 final class DiscoverViewModel: ObservableObject {
     @Published private(set) var items: [MediaItem] = []
     @Published var miniMoments: [MiniMomentItem] = []
-    @Published var gifs: [AnimatedGifItem] = []
     @Published var spotlightImagePath: String?
     @Published var spotlightAspectRatio: Double?
     @Published private(set) var state: DiscoverViewState = .loading
@@ -15,7 +14,6 @@ final class DiscoverViewModel: ObservableObject {
     private let repository: DiscoverRepository
     let spotlightRepository: SpotlightRepository
     let miniMomentRepository: MiniMomentRepository
-    let animatedGifRepository: AnimatedGifRepository
     private let favoriteRepository: FavoriteRepository
     let userDefaults: UserDefaults
     let calendar: Calendar
@@ -25,51 +23,52 @@ final class DiscoverViewModel: ObservableObject {
     private let dailyPicksVisibleCount: Int
     private let dailyPicksImageLimit: Int
     let spotlightImageLimit: Int
-    let miniMomentsImageLimit: Int
-    let gifsImageLimit: Int
+    /// Max items persisted / filled by background fetch.
+    let miniMomentsStoreLimit: Int
+    /// Max thumbnails on the Discover horizontal rail.
+    let miniMomentsRailVisibleLimit: Int
 
     private var loadTask: Task<Void, Never>?
     var spotlightTask: Task<Void, Never>?
     var miniMomentsTask: Task<Void, Never>?
-    var gifsTask: Task<Void, Never>?
 
     init(
         repository: DiscoverRepository,
         spotlightRepository: SpotlightRepository,
         miniMomentRepository: MiniMomentRepository,
-        animatedGifRepository: AnimatedGifRepository,
         favoriteRepository: FavoriteRepository,
         initialItems: [MediaItem] = [],
         initialSpotlightImagePath: String? = nil,
         initialSpotlightAspectRatio: Double? = nil,
         initialMiniMoments: [MiniMomentItem] = [],
-        initialGifs: [AnimatedGifItem] = [],
         dailyPicksVisibleCount: Int = 20,
         dailyPicksImageLimit: Int = 20,
         spotlightImageLimit: Int = 2,
-        miniMomentsImageLimit: Int = 1,
-        gifsImageLimit: Int = 1,
+        miniMomentsStoreLimit: Int = 50,
+        miniMomentsRailVisibleLimit: Int = 10,
         userDefaults: UserDefaults = .standard,
         calendar: Calendar = .current
     ) {
         self.repository = repository
         self.spotlightRepository = spotlightRepository
         self.miniMomentRepository = miniMomentRepository
-        self.animatedGifRepository = animatedGifRepository
         self.favoriteRepository = favoriteRepository
         self.dailyPicksVisibleCount = dailyPicksVisibleCount
         self.dailyPicksImageLimit = dailyPicksImageLimit
         self.spotlightImageLimit = spotlightImageLimit
-        self.miniMomentsImageLimit = miniMomentsImageLimit
-        self.gifsImageLimit = gifsImageLimit
+        self.miniMomentsStoreLimit = miniMomentsStoreLimit
+        self.miniMomentsRailVisibleLimit = miniMomentsRailVisibleLimit
         self.userDefaults = userDefaults
         self.calendar = calendar
         items = initialItems
         miniMoments = initialMiniMoments
-        gifs = initialGifs
         spotlightImagePath = initialSpotlightImagePath
         spotlightAspectRatio = initialSpotlightAspectRatio
         state = initialItems.isEmpty ? .loading : .loaded
+    }
+
+    var miniMomentsForRail: [MiniMomentItem] {
+        Array(miniMoments.prefix(miniMomentsRailVisibleLimit))
     }
 
     func start() {
@@ -128,6 +127,29 @@ final class DiscoverViewModel: ObservableObject {
         }
     }
 
+    func showMiniMomentDetail(item: MiniMomentItem) {
+        Task { [weak self] in
+            guard let self else { return }
+            let all = await miniMomentRepository.loadCached(limit: Int.max)
+            guard all.contains(where: { $0.id == item.id }) else { return }
+            let detailItems = all.map {
+                DetailMediaItem(
+                    id: $0.id,
+                    sourceID: $0.id,
+                    displayName: "",
+                    mediaType: .video,
+                    imagePath: $0.localFilePath
+                )
+            }
+            imageDetailViewModel = ImageDetailViewModel(
+                items: detailItems,
+                selectedItemID: item.id,
+                flow: .miniMoments,
+                favoriteRepository: favoriteRepository
+            )
+        }
+    }
+
     func showFavorites() {
         favoritesViewModel = FavoritesViewModel(favoriteRepository: favoriteRepository)
     }
@@ -144,7 +166,6 @@ final class DiscoverViewModel: ObservableObject {
         loadTask?.cancel()
         spotlightTask?.cancel()
         miniMomentsTask?.cancel()
-        gifsTask?.cancel()
         loadTask = Task { [weak self] in
             guard let self else { return }
             await self.loadDiscoverItems(forceReload: forceReload)
@@ -161,7 +182,6 @@ final class DiscoverViewModel: ObservableObject {
 
         startSpotlight(forceReload: forceReload)
         startMiniMoments(forceReload: forceReload)
-        startGifs(forceReload: forceReload)
         guard !Task.isCancelled else { return }
 
         let cachedItems = await repository.loadCached(limit: dailyPicksVisibleCount)
@@ -348,9 +368,6 @@ final class DiscoverViewModel: ObservableObject {
 
     private static func mediaType(from url: URL) -> FavoriteMediaType {
         let ext = url.pathExtension.lowercased()
-        if ext == "gif" {
-            return .gif
-        }
         if ["mp4", "mov", "m4v", "avi", "webm"].contains(ext) {
             return .video
         }

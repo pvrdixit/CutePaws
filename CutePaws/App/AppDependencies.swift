@@ -8,7 +8,6 @@ final class AppDependencies {
     let discoverModelContainer: ModelContainer
     let spotlightModelContainer: ModelContainer
     let miniMomentsModelContainer: ModelContainer
-    let gifsModelContainer: ModelContainer
     let favoritesModelContainer: ModelContainer
 
     init() {
@@ -23,8 +22,6 @@ final class AppDependencies {
             let spotlightConfiguration = ModelConfiguration(url: spotlightStoreURL)
             let miniMomentsStoreURL = applicationSupportURL.appendingPathComponent("miniMoments.store")
             let miniMomentsConfiguration = ModelConfiguration(url: miniMomentsStoreURL)
-            let gifsStoreURL = applicationSupportURL.appendingPathComponent("gifs.store")
-            let gifsConfiguration = ModelConfiguration(url: gifsStoreURL)
             let favoritesStoreURL = applicationSupportURL.appendingPathComponent("favorites.store")
             let favoritesConfiguration = ModelConfiguration(url: favoritesStoreURL)
 
@@ -32,7 +29,6 @@ final class AppDependencies {
             print("SwiftData discover store path:", discoverStoreURL.path)
             print("SwiftData spotlight store path:", spotlightStoreURL.path)
             print("SwiftData mini moments store path:", miniMomentsStoreURL.path)
-            print("SwiftData gifs store path:", gifsStoreURL.path)
             print("SwiftData favorites store path:", favoritesStoreURL.path)
             #endif
 
@@ -47,10 +43,6 @@ final class AppDependencies {
             miniMomentsModelContainer = try ModelContainer(
                 for: StoredMiniMomentItem.self,
                 configurations: miniMomentsConfiguration
-            )
-            gifsModelContainer = try ModelContainer(
-                for: StoredAnimatedGifItem.self,
-                configurations: gifsConfiguration
             )
             favoritesModelContainer = try ModelContainer(
                 for: StoredFavoriteItem.self,
@@ -76,11 +68,6 @@ final class AppDependencies {
         fileStorage: miniMomentMediaFileStorage,
         logger: logger
     )
-    lazy var animatedGifStore = SwiftDataAnimatedGifStore(
-        container: gifsModelContainer,
-        fileStorage: gifMediaFileStorage,
-        logger: logger
-    )
     lazy var favoriteStore = SwiftDataFavoriteStore(
         container: favoritesModelContainer,
         fileStorage: favoritesMediaFileStorage
@@ -91,12 +78,10 @@ final class AppDependencies {
     private lazy var mediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "DailyPicks")
     private lazy var spotlightMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "SpotlightMedia")
     private lazy var miniMomentMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "MiniMoments")
-    private lazy var gifMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "Gifs")
     private lazy var favoritesMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "Favorites")
     private lazy var dogCeoRemoteDataSource = DogCeoRemoteDataSource(httpUtility: httpUtility)
     private lazy var randomDogRemoteDataSource = RandomDogRemoteDataSource(httpUtility: httpUtility)
     private lazy var randomDogMiniMomentRemoteDataSource = RandomDogMiniMomentRemoteDataSource(httpUtility: httpUtility)
-    private lazy var randomDogGifRemoteDataSource = RandomDogGifRemoteDataSource(httpUtility: httpUtility)
 
     lazy var discoverRepository: DiscoverRepository = DiscoverRepositoryImpl(
         remoteDataSource: dogCeoRemoteDataSource,
@@ -120,13 +105,6 @@ final class AppDependencies {
         imageDownloadService: imageDownloadService,
         mediaFileStorage: miniMomentMediaFileStorage,
         store: miniMomentStore,
-        logger: logger
-    )
-    lazy var animatedGifRepository: AnimatedGifRepository = AnimatedGifRepositoryImpl(
-        remoteDataSource: randomDogGifRemoteDataSource,
-        imageDownloadService: imageDownloadService,
-        mediaFileStorage: gifMediaFileStorage,
-        store: animatedGifStore,
         logger: logger
     )
 

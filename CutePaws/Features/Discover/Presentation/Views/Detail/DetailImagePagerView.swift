@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 struct DetailImagePagerView: View {
@@ -10,7 +11,7 @@ struct DetailImagePagerView: View {
     var body: some View {
         TabView(selection: $selectedIndex) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                imagePage(for: item)
+                mediaPage(for: item)
                     .tag(index)
             }
         }
@@ -27,8 +28,18 @@ struct DetailImagePagerView: View {
     }
 
     @ViewBuilder
-    private func imagePage(for item: DetailMediaItem) -> some View {
-        if hasImage(at: item.imagePath) {
+    private func mediaPage(for item: DetailMediaItem) -> some View {
+        switch item.mediaType {
+        case .photo:
+            photoPage(for: item)
+        case .video:
+            videoPage(for: item)
+        }
+    }
+
+    @ViewBuilder
+    private func photoPage(for item: DetailMediaItem) -> some View {
+        if hasCachedImage(at: item.imagePath) {
             ZoomableImageView(
                 imagePath: item.imagePath,
                 imageID: item.id,
@@ -45,9 +56,58 @@ struct DetailImagePagerView: View {
         }
     }
 
-    private func hasImage(at path: String?) -> Bool {
+    @ViewBuilder
+    private func videoPage(for item: DetailMediaItem) -> some View {
+        if let path = item.imagePath, FileManager.default.fileExists(atPath: path) {
+            DetailAspectFittedVideoPage(url: URL(fileURLWithPath: path))
+                .ignoresSafeArea()
+        } else {
+            ContentUnavailableView("Video unavailable", systemImage: "video.slash")
+                .foregroundStyle(Color(uiColor: .secondaryLabel))
+        }
+    }
+
+    private func hasCachedImage(at path: String?) -> Bool {
         guard let path else { return false }
         return ImageCache.shared.image(forFilePath: path) != nil
+    }
+}
+
+// MARK: - Aspect fit (same idea as photo aspect fit)
+
+private struct DetailAspectFittedVideoPage: View {
+    let url: URL
+
+    @State private var aspectRatio: CGFloat = 1
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = Self.aspectFitSize(
+                container: proxy.size,
+                mediaAspectWidthOverHeight: max(aspectRatio, 0.01)
+            )
+            LoopingVideoView(url: url, isMuted: false, videoGravity: .resizeAspect)
+                .frame(width: size.width, height: size.height)
+                .position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.5)
+        }
+        .task(id: url.path) {
+            if let r = await MediaAspectRatioReader.videoAspectRatio(fileURL: url) {
+                aspectRatio = r
+            }
+        }
+    }
+
+    private static func aspectFitSize(container: CGSize, mediaAspectWidthOverHeight r: CGFloat) -> CGSize {
+        guard r > 0, container.width > 0, container.height > 0 else {
+            return CGSize(width: container.width, height: container.height)
+        }
+        var width = container.width
+        var height = width / r
+        if height > container.height {
+            height = container.height
+            width = height * r
+        }
+        return CGSize(width: width, height: height)
     }
 }
 
@@ -80,4 +140,3 @@ private struct DetailImagePagerPreviewHost: View {
 #Preview {
     DetailImagePagerPreviewHost()
 }
-

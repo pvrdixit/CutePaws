@@ -11,5 +11,5 @@ struct DetailMediaItem: Identifiable, Equatable, Sendable {
 enum ImageDetailFlow: Sendable {
     case dailyPicks
     case spotlight
+    case miniMoments
 }
-

@@ -1,6 +1,5 @@
 import AVFoundation
 import Foundation
-import ImageIO
 
 enum MediaAspectRatioReader {
     actor VideoAspectRatioCache {
@@ -11,16 +10,20 @@ enum MediaAspectRatioReader {
 
     static let mediaRailMinAspectRatio: CGFloat = 0.56
     static let mediaRailMaxAspectRatio: CGFloat = 1.78
-    private static let cache = VideoAspectRatioCache()
+
+    private static let videoCache = VideoAspectRatioCache()
 
     static func isAcceptableMediaRailAspectRatio(_ ratio: CGFloat) -> Bool {
         ratio >= mediaRailMinAspectRatio && ratio <= mediaRailMaxAspectRatio
     }
 
+    /// Default width heuristic for the rail when the path is missing or unreadable.
+    static let videoRailFallbackAspectRatio: CGFloat = 0.96
+
     /// Reads display aspect ratio from the first video track using async asset loading (iOS 16+).
     static func videoAspectRatio(fileURL: URL) async -> CGFloat? {
         let key = fileURL.path
-        if let cached = await cache.value(forKey: key) {
+        if let cached = await videoCache.value(forKey: key) {
             return cached
         }
 
@@ -37,25 +40,15 @@ enum MediaAspectRatioReader {
             let height = abs(transformedSize.height)
             guard width > 0, height > 0 else { return nil }
             let ratio = width / height
-            await cache.set(ratio, forKey: key)
+            await videoCache.set(ratio, forKey: key)
             return ratio
         } catch {
             return nil
         }
     }
 
-    static func gifAspectRatio(fileURL: URL) -> CGFloat? {
-        guard
-            let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
-            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-            let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
-            let height = properties[kCGImagePropertyPixelHeight] as? CGFloat,
-            width > 0,
-            height > 0
-        else {
-            return nil
-        }
-        return width / height
+    static func videoDisplayAspectRatio(localPath: String?) async -> CGFloat {
+        guard let path = localPath else { return videoRailFallbackAspectRatio }
+        return await videoAspectRatio(fileURL: URL(fileURLWithPath: path)) ?? videoRailFallbackAspectRatio
     }
 }
-

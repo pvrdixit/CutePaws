@@ -50,7 +50,7 @@ final class MiniMomentRepositoryImpl: MiniMomentRepository {
             let urls = filteredCandidates.map(\.url)
             let fileSizesByURL = Dictionary(uniqueKeysWithValues: candidates.map { ($0.url.absoluteString, $0.fileSizeBytes) })
 
-            let downloaded = await imageDownloadService.downloadImages(from: urls, maxConcurrent: 2)
+            let downloaded = await imageDownloadService.downloadImages(from: urls, maxConcurrent: 4)
             for (url, data) in downloaded {
                 let key = url.absoluteString
                 guard seenRemoteURLs.insert(key).inserted else { continue }

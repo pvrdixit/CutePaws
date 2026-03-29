@@ -79,15 +79,8 @@ struct DiscoverView: View {
                     }
 
                     DiscoverMiniMomentsSectionView(
-                        items: viewModel.miniMoments,
-                        onSelectItem: { _ in }
-                    )
-                    .padding(.horizontal, Layout.horizontalPadding)
-                    .padding(.bottom, Layout.spacingAfterSection)
-
-                    DiscoverGifsSectionView(
-                        items: viewModel.gifs,
-                        onSelectItem: { _ in }
+                        items: viewModel.miniMomentsForRail,
+                        onSelectItem: viewModel.showMiniMomentDetail(item:)
                     )
                     .padding(.horizontal, Layout.horizontalPadding)
                     .padding(.bottom, Layout.spacingAfterSection)

@@ -4,7 +4,8 @@ import UIKit
 
 struct LoopingVideoView: UIViewRepresentable {
     let url: URL
-    let isMuted: Bool
+    var isMuted: Bool = true
+    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -12,12 +13,12 @@ struct LoopingVideoView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PlayerContainerView {
         let view = PlayerContainerView()
-        context.coordinator.attach(to: view, url: url, isMuted: isMuted)
+        context.coordinator.attach(to: view, url: url, isMuted: isMuted, videoGravity: videoGravity)
         return view
     }
 
     func updateUIView(_ uiView: PlayerContainerView, context: Context) {
-        context.coordinator.attach(to: uiView, url: url, isMuted: isMuted)
+        context.coordinator.attach(to: uiView, url: url, isMuted: isMuted, videoGravity: videoGravity)
     }
 
     static func dismantleUIView(_ uiView: PlayerContainerView, coordinator: Coordinator) {
@@ -30,8 +31,10 @@ struct LoopingVideoView: UIViewRepresentable {
         private var currentURL: URL?
         private weak var hostView: PlayerContainerView?
 
-        func attach(to view: PlayerContainerView, url: URL, isMuted: Bool) {
+        func attach(to view: PlayerContainerView, url: URL, isMuted: Bool, videoGravity: AVLayerVideoGravity) {
             hostView = view
+            view.playerLayer.videoGravity = videoGravity
+
             if currentURL != url || queuePlayer == nil {
                 let asset = AVURLAsset(url: url)
                 let item = AVPlayerItem(asset: asset)
@@ -68,8 +71,6 @@ final class PlayerContainerView: UIView {
         guard let layer = layer as? AVPlayerLayer else {
             fatalError("Expected AVPlayerLayer")
         }
-        layer.videoGravity = .resizeAspectFill
         return layer
     }
 }
-

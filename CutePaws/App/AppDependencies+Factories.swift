@@ -3,18 +3,17 @@ import SwiftData
 
 extension AppDependencies {
     private enum DiscoverLimits {
-        static let dailyPicksVisibleCount = 20
-        static let dailyPicksImageLimit = 100
+        static let dailyPicksVisibleCount = 25
+        static let dailyPicksImageLimit = 125
         static let spotlightImageLimit = 10
-        static let miniMomentsImageLimit = 10
-        static let gifsImageLimit = 10
+        static let miniMomentsStoreLimit = 50
+        static let miniMomentsVisibleLimit = 10
     }
 
     func makeDiscoverViewModel() -> DiscoverViewModel {
         let initialItems = discoverStore.fetchItemsSnapshot(limit: DiscoverLimits.dailyPicksVisibleCount)
         let initialSpotlightItem = spotlightStore.fetchItemsSnapshot(limit: DiscoverLimits.spotlightImageLimit).last
-        let initialMiniMoments = miniMomentStore.fetchItemsSnapshot(limit: DiscoverLimits.miniMomentsImageLimit)
-        let initialGifs = animatedGifStore.fetchItemsSnapshot(limit: DiscoverLimits.gifsImageLimit)
+        let initialMiniMoments = miniMomentStore.fetchItemsSnapshot(limit: DiscoverLimits.miniMomentsStoreLimit)
 
         #if DEBUG
         print("AppDependencies.makeDiscoverViewModel initialItems:", initialItems.count)
@@ -24,18 +23,18 @@ extension AppDependencies {
             repository: discoverRepository,
             spotlightRepository: spotlightRepository,
             miniMomentRepository: miniMomentRepository,
-            animatedGifRepository: animatedGifRepository,
             favoriteRepository: favoriteRepository,
             initialItems: initialItems,
             initialSpotlightImagePath: initialSpotlightItem?.localFilePath,
             initialSpotlightAspectRatio: initialSpotlightItem?.aspectRatio,
             initialMiniMoments: initialMiniMoments,
-            initialGifs: initialGifs,
             dailyPicksVisibleCount: DiscoverLimits.dailyPicksVisibleCount,
             dailyPicksImageLimit: DiscoverLimits.dailyPicksImageLimit,
             spotlightImageLimit: DiscoverLimits.spotlightImageLimit,
-            miniMomentsImageLimit: DiscoverLimits.miniMomentsImageLimit,
-            gifsImageLimit: DiscoverLimits.gifsImageLimit
+            miniMomentsStoreLimit: DiscoverLimits.miniMomentsStoreLimit,
+            miniMomentsRailVisibleLimit: DiscoverLimits.miniMomentsVisibleLimit,
+            userDefaults: .standard,
+            calendar: .current
         )
     }
 
@@ -58,4 +57,3 @@ extension AppDependencies {
         return directoryURL
     }
 }
-

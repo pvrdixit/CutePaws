@@ -15,8 +15,6 @@ struct MediaQualityEvaluator {
     static let spotlightMaxFileSize = 2_000_000
     static let miniMomentMinFileSize = 1_000_000
     static let miniMomentMaxFileSize = 8_000_000
-    static let gifMinFileSize = 800_000
-    static let gifMaxFileSize = 5_000_000
 
     static func isFileSizeWithinLimits(_ bytes: Int, min: Int, max: Int) -> Bool {
         bytes >= min && bytes <= max
@@ -28,10 +26,6 @@ struct MediaQualityEvaluator {
 
     static func isAcceptableMiniMomentFileSize(_ bytes: Int) -> Bool {
         isFileSizeWithinLimits(bytes, min: miniMomentMinFileSize, max: miniMomentMaxFileSize)
-    }
-
-    static func isAcceptableGifFileSize(_ bytes: Int) -> Bool {
-        isFileSizeWithinLimits(bytes, min: gifMinFileSize, max: gifMaxFileSize)
     }
 
     static func isAcceptableImage(data: Data) -> Bool {

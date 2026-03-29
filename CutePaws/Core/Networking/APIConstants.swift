@@ -39,16 +39,5 @@ enum APIConstants {
             ]
             return components.url
         }
-
-        static func randomGifURL() -> URL? {
-            var components = URLComponents()
-            components.scheme = scheme
-            components.host = host
-            components.path = "/woof.json"
-            components.queryItems = [
-                URLQueryItem(name: "include", value: "gif")
-            ]
-            return components.url
-        }
     }
 }

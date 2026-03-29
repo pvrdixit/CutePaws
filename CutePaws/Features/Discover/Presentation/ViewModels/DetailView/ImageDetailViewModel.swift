@@ -33,7 +33,7 @@ final class ImageDetailViewModel: ObservableObject, Identifiable {
     }
 
     var shouldShowDisplayName: Bool {
-        flow != .spotlight
+        flow == .dailyPicks
     }
 
     var positionText: String {

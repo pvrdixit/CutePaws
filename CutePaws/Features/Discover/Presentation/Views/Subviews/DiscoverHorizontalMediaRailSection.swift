@@ -29,3 +29,29 @@ struct DiscoverHorizontalMediaRailSection<Item: Identifiable, Content: View>: Vi
         }
     }
 }
+
+// MARK: - Shared rail chrome
+
+extension View {
+    func discoverMediaRailCardChrome(width: CGFloat, onTap: @escaping () -> Void) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        return frame(width: width, height: DiscoverMediaRailLayout.cardHeight)
+            .clipShape(shape)
+            .contentShape(shape)
+            .onTapGesture(perform: onTap)
+    }
+}
+
+/// Placeholder when `localPath` is nil; otherwise builds content with a file URL.
+struct DiscoverMediaRailLocalFileSlot<Content: View>: View {
+    let localPath: String?
+    @ViewBuilder let content: (URL) -> Content
+
+    var body: some View {
+        if let localPath {
+            content(URL(fileURLWithPath: localPath))
+        } else {
+            Rectangle().fill(Color.secondary.opacity(0.2))
+        }
+    }
+}
