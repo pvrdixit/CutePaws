@@ -19,7 +19,7 @@ final class DogCeoBreedGalleryRemoteDataSource: BreedGalleryRemoteDataSource {
             throw URLError(.badURL)
         }
         let request = URLRequest(url: url)
-        let response = try await httpUtility.request(DogCeoFlatBreedListResponse.self, with: request)
+        let response = try await httpUtility.request(DogCeoListResponse.self, with: request)
         return response.message.sorted()
     }
 
@@ -31,7 +31,7 @@ final class DogCeoBreedGalleryRemoteDataSource: BreedGalleryRemoteDataSource {
         }
 
         let request = URLRequest(url: url)
-        let response = try await httpUtility.request(DogCeoImageListResponse.self, with: request)
+        let response = try await httpUtility.request(DogCeoListResponse.self, with: request)
         return deduplicate(response.message.compactMap(URL.init(string:)))
     }
 
@@ -41,7 +41,7 @@ final class DogCeoBreedGalleryRemoteDataSource: BreedGalleryRemoteDataSource {
         }
 
         let request = URLRequest(url: url)
-        let response = try await httpUtility.request(DogCeoImageListResponse.self, with: request)
+        let response = try await httpUtility.request(DogCeoListResponse.self, with: request)
         return deduplicate(response.message.compactMap(URL.init(string:)))
     }
 

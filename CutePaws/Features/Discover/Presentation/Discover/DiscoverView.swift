@@ -7,9 +7,10 @@ private struct BreedExploreGalleryRoute: Hashable {
 }
 
 struct DiscoverView: View {
-    @StateObject var viewModel: DiscoverViewModel
+    @Bindable var viewModel: DiscoverViewModel
     @State private var explorePath = NavigationPath()
     @State private var exploreImageDetailViewModel: ImageDetailViewModel?
+    @State private var isAboutPresented = false
 
     private enum Layout {
         static let horizontalPadding: CGFloat = 12
@@ -49,6 +50,9 @@ struct DiscoverView: View {
         .fullScreenCover(item: $viewModel.favoritesViewModel, onDismiss: viewModel.dismissFavoritesView) { favoritesViewModel in
             FavoritesView(viewModel: favoritesViewModel)
         }
+        .fullScreenCover(isPresented: $isAboutPresented) {
+            DiscoverAboutView()
+        }
     }
 
     @ViewBuilder
@@ -57,9 +61,6 @@ struct DiscoverView: View {
         case .loading:
             LoadingView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background {
-                    AppBackgroundView().ignoresSafeArea()
-                }
 
         case .error(let message):
             ScrollView(showsIndicators: false) {
@@ -81,7 +82,8 @@ struct DiscoverView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
-                AppBackgroundView().ignoresSafeArea()
+                Color.appBackground
+                    .ignoresSafeArea()
             }
 
         case .loaded:
@@ -133,7 +135,8 @@ struct DiscoverView: View {
                 .frame(width: proxy.size.width, alignment: .topLeading)
             }
             .background {
-                AppBackgroundView().ignoresSafeArea()
+                Color.appBackground
+                    .ignoresSafeArea()
             }
         }
     }
@@ -143,6 +146,7 @@ struct DiscoverView: View {
             LargeDisplayTitleView(title: "Discover")
             Spacer()
             exploreButton
+            aboutButton
             favoritesButton
         }
     }
@@ -151,7 +155,7 @@ struct DiscoverView: View {
         Button {
             explorePath.append(BreedExploreListRoute())
         } label: {
-            Label("Explore breeds", systemImage: "sparkles")
+            Label("Explore", systemImage: "sparkles")
                 .foregroundStyle(.accent)
                 .lineLimit(1)
                 .font(.custom("Didot Bold", size: 13))
@@ -160,6 +164,20 @@ struct DiscoverView: View {
                 .background(.ultraThinMaterial, in: Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    private var aboutButton: some View {
+        Button {
+            isAboutPresented = true
+        } label: {
+            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.accent)
+                .frame(width: 36, height: 36)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("About CutePaws")
     }
 
     private var favoritesButton: some View {
@@ -184,14 +202,7 @@ struct DiscoverView: View {
     }
 }
 
-#Preview("DiscoverView Light") {
-    let dependencies = AppDependencies()
-    return DiscoverView(viewModel: dependencies.makeDiscoverViewModel())
-        .preferredColorScheme(.light)
-}
-
-#Preview("DiscoverView Dark") {
-    let dependencies = AppDependencies()
-    return DiscoverView(viewModel: dependencies.makeDiscoverViewModel())
-        .preferredColorScheme(.dark)
+#Preview {
+    @Previewable @State var viewModel = AppDependencies().makeDiscoverViewModel()
+    DiscoverView(viewModel: viewModel)
 }

@@ -157,13 +157,12 @@ struct ZoomableImageView: UIViewRepresentable {
 }
 
 #Preview {
-    let item = PreviewData.mediaItems[0]
-
-    return ZoomableImageView(
-        imagePath: item.localFilePath,
-        imageID: item.id,
+    ZoomableImageView(
+        imagePath: nil,
+        imageID: "preview",
         isSelected: true,
         onZoomStateChanged: { _ in }
     )
+    .frame(height: 280)
     .background(Color(uiColor: .systemBackground))
 }

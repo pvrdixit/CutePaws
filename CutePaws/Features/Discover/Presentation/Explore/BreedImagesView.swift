@@ -9,7 +9,7 @@ struct BreedImagesView: View {
     let breedName: String
     let onRequestImageDetail: (ImageDetailViewModel) -> Void
 
-    @StateObject private var viewModel: BreedImagesViewModel
+    @State private var viewModel: BreedImagesViewModel
 
     private let favoriteRepository: FavoriteRepository
 
@@ -22,7 +22,7 @@ struct BreedImagesView: View {
         self.breedName = breedName
         self.favoriteRepository = favoriteRepository
         self.onRequestImageDetail = onRequestImageDetail
-        _viewModel = StateObject(
+        _viewModel = State(
             wrappedValue: BreedImagesViewModel(
                 breedName: breedName,
                 breedGalleryRepository: breedGalleryRepository
@@ -33,7 +33,8 @@ struct BreedImagesView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                AppBackgroundView().ignoresSafeArea()
+                Color.appBackground
+                    .ignoresSafeArea()
 
                 Group {
                     switch viewModel.phase {

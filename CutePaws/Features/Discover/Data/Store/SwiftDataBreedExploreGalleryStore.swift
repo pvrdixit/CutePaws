@@ -22,35 +22,6 @@ protocol BreedExploreGalleryStore {
     func markQualityRejected(galleryKey: String, relativeImagePath: String) async
 }
 
-@Model
-final class StoredBreedExploreGalleryImage {
-    @Attribute(.unique) var storageID: String
-    var galleryKey: String
-    var relativeImagePath: String
-    var localFilePath: String?
-    var aspectRatio: Double
-    var qualityRejected: Bool
-    var createdAt: Date
-
-    init(
-        storageID: String,
-        galleryKey: String,
-        relativeImagePath: String,
-        localFilePath: String?,
-        aspectRatio: Double,
-        qualityRejected: Bool,
-        createdAt: Date
-    ) {
-        self.storageID = storageID
-        self.galleryKey = galleryKey
-        self.relativeImagePath = relativeImagePath
-        self.localFilePath = localFilePath
-        self.aspectRatio = aspectRatio
-        self.qualityRejected = qualityRejected
-        self.createdAt = createdAt
-    }
-}
-
 @MainActor
 final class SwiftDataBreedExploreGalleryStore: BreedExploreGalleryStore {
     private let context: ModelContext

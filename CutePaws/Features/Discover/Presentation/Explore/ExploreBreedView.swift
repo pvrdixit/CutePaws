@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ExploreBreedView: View {
-    @StateObject private var viewModel: ExploreBreedViewModel
+    @State private var viewModel: ExploreBreedViewModel
     @State private var searchText = ""
     let onSelectBreed: (String) -> Void
 
@@ -10,9 +10,7 @@ struct ExploreBreedView: View {
         onSelectBreed: @escaping (String) -> Void
     ) {
         self.onSelectBreed = onSelectBreed
-        _viewModel = StateObject(
-            wrappedValue: ExploreBreedViewModel(breedGalleryRepository: breedGalleryRepository)
-        )
+        _viewModel = State(wrappedValue: ExploreBreedViewModel(breedGalleryRepository: breedGalleryRepository))
     }
 
     var body: some View {
@@ -55,7 +53,8 @@ struct ExploreBreedView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
-            AppBackgroundView().ignoresSafeArea()
+            Color.appBackground
+                .ignoresSafeArea()
         }
         .navigationTitle("Explore breeds")
         .navigationBarTitleDisplayMode(.inline)

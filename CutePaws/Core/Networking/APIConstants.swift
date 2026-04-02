@@ -14,14 +14,6 @@ enum APIConstants {
             return components.url
         }
 
-        static func breedsListAllURL() -> URL? {
-            var components = URLComponents()
-            components.scheme = scheme
-            components.host = host
-            components.path = "/api/breeds/list/all"
-            return components.url
-        }
-
         /// Flat breed slugs (`/api/breeds/list`).
         static func breedsListURL() -> URL? {
             var components = URLComponents()

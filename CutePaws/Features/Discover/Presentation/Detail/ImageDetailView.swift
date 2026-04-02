@@ -1,17 +1,14 @@
 import SwiftUI
 
 struct ImageDetailView: View {
-    @ObservedObject var viewModel: ImageDetailViewModel
+    @Bindable var viewModel: ImageDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isCurrentImageZoomed = false
 
-    init(viewModel: ImageDetailViewModel) {
-        self._viewModel = ObservedObject(wrappedValue: viewModel)
-    }
-
     var body: some View {
         ZStack(alignment: .top) {
-            AppBackgroundView().ignoresSafeArea()
+            Color.appBackground
+                .ignoresSafeArea()
 
             DetailImagePagerView(
                 items: viewModel.items,
@@ -59,22 +56,15 @@ struct ImageDetailView: View {
 }
 
 #Preview {
-    let dependencies = AppDependencies()
-    let items = PreviewData.mediaItems.map {
-        DetailMediaItem(
-            id: $0.id,
-            sourceID: $0.id,
-            displayName: "Dog",
-            mediaType: .photo,
-            imagePath: $0.localFilePath
-        )
-    }
-    return ImageDetailView(
-        viewModel: ImageDetailViewModel(
-            items: items,
-            selectedItemID: items[0].id,
-            flow: .dailyPicks,
-            favoriteRepository: dependencies.favoriteRepository
-        )
-    ).preferredColorScheme(.dark)
+    @Previewable @State var viewModel = ImageDetailViewModel(
+        items: [
+            DetailMediaItem(id: "1", sourceID: "1", displayName: "Golden", mediaType: .photo, imagePath: nil),
+            DetailMediaItem(id: "2", sourceID: "2", displayName: "Husky", mediaType: .photo, imagePath: nil),
+        ],
+        selectedItemID: "1",
+        flow: .dailyPicks,
+        favoriteRepository: AppDependencies().favoriteRepository
+    )
+    ImageDetailView(viewModel: viewModel)
+        .preferredColorScheme(.dark)
 }

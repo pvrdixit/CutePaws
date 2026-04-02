@@ -4,7 +4,10 @@ import SwiftData
 @MainActor
 final class AppDependencies {
     let logger: AppLogger
-    let httpUtility: HTTPUtility
+    /// JSON + image bytes for Dog CEO–backed flows (tighter session timeouts).
+    let dogCeoHTTPUtility: HTTPUtility
+    /// RandomDog API (spotlight / mini moments) — longer waits for slow responses.
+    let randomDogHTTPUtility: HTTPUtility
     let discoverModelContainer: ModelContainer
     let spotlightModelContainer: ModelContainer
     let miniMomentsModelContainer: ModelContainer
@@ -13,52 +16,17 @@ final class AppDependencies {
 
     init() {
         logger = AppLogger(subsystem: Bundle.main.bundleIdentifier ?? "CutePaws")
-        httpUtility = HTTPUtility(timeout: 120.0)
+        dogCeoHTTPUtility = HTTPUtility(timeout: 20.0)
+        randomDogHTTPUtility = HTTPUtility(timeout: 120.0)
 
         do {
             let applicationSupportURL = try Self.makeApplicationSupportDirectory(using: .default)
-            let discoverStoreURL = applicationSupportURL.appendingPathComponent("discover.store")
-            let discoverConfiguration = ModelConfiguration(url: discoverStoreURL, cloudKitDatabase: .none)
-            let spotlightStoreURL = applicationSupportURL.appendingPathComponent("spotlight.store")
-            let spotlightConfiguration = ModelConfiguration(url: spotlightStoreURL, cloudKitDatabase: .none)
-            let miniMomentsStoreURL = applicationSupportURL.appendingPathComponent("miniMoments.store")
-            let miniMomentsConfiguration = ModelConfiguration(url: miniMomentsStoreURL, cloudKitDatabase: .none)
-            let breedGalleryStoreURL = applicationSupportURL.appendingPathComponent("breedGallery.store")
-            let breedGalleryConfiguration = ModelConfiguration(url: breedGalleryStoreURL, cloudKitDatabase: .none)
-            let favoritesStoreURL = applicationSupportURL.appendingPathComponent("favorites.store")
-            let favoritesConfiguration = ModelConfiguration(url: favoritesStoreURL, cloudKitDatabase: .none)
-
-            #if DEBUG
-            print("SwiftData discover store path:", discoverStoreURL.path)
-            print("SwiftData spotlight store path:", spotlightStoreURL.path)
-            print("SwiftData mini moments store path:", miniMomentsStoreURL.path)
-            print("SwiftData breed gallery store path:", breedGalleryStoreURL.path)
-            print("SwiftData favorites store path:", favoritesStoreURL.path)
-            #endif
-
-            discoverModelContainer = try ModelContainer(
-                for: StoredMediaItem.self,
-                configurations: discoverConfiguration
-            )
-            spotlightModelContainer = try ModelContainer(
-                for: StoredSpotlightItem.self,
-                configurations: spotlightConfiguration
-            )
-            miniMomentsModelContainer = try ModelContainer(
-                for: StoredMiniMomentItem.self,
-                configurations: miniMomentsConfiguration
-            )
-            breedGalleryModelContainer = try ModelContainer(
-                for: StoredBreedGalleryItem.self,
-                StoredBreedThumbnailItem.self,
-                StoredBreedExploreMetadata.self,
-                StoredBreedExploreGalleryImage.self,
-                configurations: breedGalleryConfiguration
-            )
-            favoritesModelContainer = try ModelContainer(
-                for: StoredFavoriteItem.self,
-                configurations: favoritesConfiguration
-            )
+            let containers = try AppDependencies.makeModelContainers(applicationSupportURL: applicationSupportURL)
+            discoverModelContainer = containers.discover
+            spotlightModelContainer = containers.spotlight
+            miniMomentsModelContainer = containers.miniMoments
+            breedGalleryModelContainer = containers.breedGallery
+            favoritesModelContainer = containers.favorites
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }
@@ -102,7 +70,7 @@ final class AppDependencies {
         fileStorage: favoritesMediaFileStorage
     )
 
-    private lazy var imageDownloadService = ImageDownloadService(httpUtility: httpUtility)
+    private lazy var imageDownloadService = ImageDownloadService(httpUtility: dogCeoHTTPUtility)
     private lazy var imageMetadataService: ImageMetadataService = DefaultImageMetadataService()
     private lazy var thumbnailCompressor = ImageCompressor()
     private lazy var mediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "DailyPicks")
@@ -111,14 +79,14 @@ final class AppDependencies {
     private lazy var breedGalleryMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "BreedGallery")
     private lazy var breedExploreGalleryMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "BreedExploreGallery")
     private lazy var favoritesMediaFileStorage: MediaFileStorage = DefaultMediaFileStorage(directoryName: "Favorites")
-    private lazy var dogCeoRemoteDataSource = DogCeoRemoteDataSource(httpUtility: httpUtility)
-    private lazy var dogCeoBreedGalleryRemoteDataSource = DogCeoBreedGalleryRemoteDataSource(httpUtility: httpUtility)
+    private lazy var dogCeoRemoteDataSource = DogCeoRemoteDataSource(httpUtility: dogCeoHTTPUtility)
+    private lazy var dogCeoBreedGalleryRemoteDataSource = DogCeoBreedGalleryRemoteDataSource(httpUtility: dogCeoHTTPUtility)
     private lazy var randomDogRemoteDataSource = RandomDogRemoteDataSource(
-        httpUtility: httpUtility,
+        httpUtility: randomDogHTTPUtility,
         mediaQualityEvaluator: MediaQuality.spotlight
     )
     private lazy var randomDogMiniMomentRemoteDataSource = RandomDogMiniMomentRemoteDataSource(
-        httpUtility: httpUtility,
+        httpUtility: randomDogHTTPUtility,
         mediaQualityEvaluator: MediaQuality.miniMoments
     )
 
@@ -131,7 +99,7 @@ final class AppDependencies {
         store: discoverStore,
         logger: logger
     )
-    
+
     lazy var spotlightRepository: SpotlightRepository = SpotlightRepositoryImpl(
         remoteDataSource: randomDogRemoteDataSource,
         imageDownloadService: imageDownloadService,

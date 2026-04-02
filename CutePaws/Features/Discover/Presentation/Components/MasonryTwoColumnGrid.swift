@@ -127,7 +127,14 @@ private struct MasonryCell: View {
 #Preview("Masonry Grid") {
     GeometryReader { geometry in
         MasonryTwoColumnGrid(
-            items: PreviewData.mediaItems,
+            items: (1...6).map { i in
+                MediaItem(
+                    remoteURL: URL(string: "https://preview.cutepaws/dog/\(i)")!,
+                    localFilePath: nil,
+                    aspectRatio: 0.75 + Double(i % 3) * 0.08,
+                    createdAt: Date()
+                )
+            },
             availableWidth: geometry.size.width,
             spacing: 8,
             onSelect: { _ in }
@@ -139,12 +146,16 @@ private struct MasonryCell: View {
 #Preview("Masonry Cell") {
     GeometryReader { geometry in
         MasonryCell(
-            item: PreviewData.mediaItems[0],
+            item: MediaItem(
+                remoteURL: URL(string: "https://preview.cutepaws/dog/1")!,
+                localFilePath: nil,
+                aspectRatio: 0.8,
+                createdAt: Date()
+            ),
             width: geometry.size.width,
             cornerRadius: 15,
             onSelect: { _ in }
         )
         .background(Color(uiColor: .systemBackground))
     }
-   
 }

@@ -2,19 +2,19 @@ import SwiftUI
 
 @main
 struct CutePawsApp: App {
-    @StateObject private var discoverViewModel: DiscoverViewModel
+    @State private var discoverViewModel: DiscoverViewModel
 
     @MainActor
     init() {
         let dependencies = AppDependencies()
-        let discoverViewModel = dependencies.makeDiscoverViewModel()
+        let vm = dependencies.makeDiscoverViewModel()
 
         #if DEBUG
         print("CutePawsApp: init start")
         #endif
 
-        discoverViewModel.start()
-        _discoverViewModel = StateObject(wrappedValue: discoverViewModel)
+        vm.start()
+        _discoverViewModel = State(initialValue: vm)
 
         #if DEBUG
         print("CutePawsApp: init end")

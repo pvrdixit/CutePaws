@@ -9,7 +9,7 @@ struct LoadingView: View {
 
     var body: some View {
         ZStack {
-            AppBackgroundView()
+            Color.appBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {

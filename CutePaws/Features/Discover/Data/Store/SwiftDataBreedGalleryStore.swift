@@ -6,35 +6,6 @@ protocol BreedGalleryStore {
     func deleteInvalidItems() async
 }
 
-@Model
-final class StoredBreedGalleryItem {
-    @Attribute(.unique) var remoteURLString: String
-    var breedName: String
-    var subBreedName: String
-    var sourceRaw: String
-    var createdAt: Date
-    var localFilePath: String?
-    var aspectRatio: Double
-
-    init(
-        remoteURLString: String,
-        breedName: String,
-        subBreedName: String,
-        sourceRaw: String,
-        createdAt: Date,
-        localFilePath: String?,
-        aspectRatio: Double
-    ) {
-        self.remoteURLString = remoteURLString
-        self.breedName = breedName
-        self.subBreedName = subBreedName
-        self.sourceRaw = sourceRaw
-        self.createdAt = createdAt
-        self.localFilePath = localFilePath
-        self.aspectRatio = aspectRatio
-    }
-}
-
 @MainActor
 final class SwiftDataBreedGalleryStore: BreedGalleryStore {
     private let context: ModelContext

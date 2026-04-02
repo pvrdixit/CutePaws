@@ -1,15 +1,15 @@
-import Combine
 import Foundation
 
 @MainActor
-final class DiscoverViewModel: ObservableObject {
-    @Published private(set) var items: [MediaItem] = []
-    @Published var miniMoments: [MiniMomentItem] = []
-    @Published var spotlightImagePath: String?
-    @Published var spotlightAspectRatio: Double?
-    @Published private(set) var state: DiscoverViewState = .loading
-    @Published var imageDetailViewModel: ImageDetailViewModel?
-    @Published var favoritesViewModel: FavoritesViewModel?
+@Observable
+final class DiscoverViewModel {
+    private(set) var items: [MediaItem] = []
+    var miniMoments: [MiniMomentItem] = []
+    var spotlightImagePath: String?
+    var spotlightAspectRatio: Double?
+    private(set) var state: DiscoverViewState = .loading
+    var imageDetailViewModel: ImageDetailViewModel?
+    var favoritesViewModel: FavoritesViewModel?
 
     private let repository: DiscoverRepository
     let spotlightRepository: SpotlightRepository
@@ -221,7 +221,44 @@ final class DiscoverViewModel: ObservableObject {
         }
     }
 
-    private func loadDiscoverItems(forceReload: Bool = false) async {
+    func shouldRunDailyRefresh(forKey key: String) -> Bool {
+        guard let lastRefreshDate = userDefaults.object(forKey: key) as? Date else {
+            debugLog("shouldRunDailyRefresh -> true (no stored date)")
+            return true
+        }
+
+        let result = !calendar.isDate(lastRefreshDate, inSameDayAs: Date())
+        debugLog("shouldRunDailyRefresh lastRefreshDate=\(lastRefreshDate) result=\(result)")
+        return result
+    }
+
+    func markRefreshedToday(forKey key: String) {
+        userDefaults.set(Date(), forKey: key)
+        debugLog("markRefreshedToday")
+    }
+
+    private var stateLabel: String {
+        switch state {
+        case .loading:
+            "loading"
+        case .loaded:
+            "loaded"
+        case .error:
+            "error"
+        }
+    }
+
+    func debugLog(_ message: String) {
+        #if DEBUG
+        print("DiscoverViewModel:", message)
+        #endif
+    }
+}
+
+// MARK: - Daily picks cache flow
+
+private extension DiscoverViewModel {
+    func loadDiscoverItems(forceReload: Bool = false) async {
         debugLog("loadDiscoverItems begin forceReload=\(forceReload) currentItems=\(items.count) state=\(stateLabel)")
 
         if forceReload {
@@ -267,7 +304,7 @@ final class DiscoverViewModel: ObservableObject {
         if cachedCount < dailyPicksImageLimit {
             debugLog("branch -> fillCacheToTarget currentCount=\(cachedCount) target=\(dailyPicksImageLimit)")
             if shouldRefreshDailyPicks {
-                markRefreshedToday()
+                markRefreshedToday(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
             }
             await fillCacheToTarget()
             return
@@ -275,21 +312,21 @@ final class DiscoverViewModel: ObservableObject {
 
         if shouldRefreshDailyPicks {
             debugLog("branch -> runDailyRefresh")
-            markRefreshedToday()
+            markRefreshedToday(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
             await runDailyRefresh()
         } else {
             debugLog("branch -> no fetch needed")
         }
     }
 
-    private func bootstrapInitialItems() async {
+    func bootstrapInitialItems() async {
         debugLog("bootstrapInitialItems begin")
         do {
             try await fillCache(untilAtLeast: dailyPicksVisibleCount)
             items = await repository.loadCached(limit: dailyPicksVisibleCount)
             state = .loaded
             debugLog("bootstrapInitialItems loaded visible items count=\(items.count)")
-            markRefreshedToday()
+            markRefreshedToday(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
             await fillCacheToTarget()
         } catch let error {
             guard !(error is CancellationError) else { return }
@@ -298,7 +335,7 @@ final class DiscoverViewModel: ObservableObject {
         }
     }
 
-    private func fillCache(untilAtLeast minimumCount: Int) async throws {
+    func fillCache(untilAtLeast minimumCount: Int) async throws {
         var attempts = 0
 
         while attempts < 5 {
@@ -316,7 +353,7 @@ final class DiscoverViewModel: ObservableObject {
         }
     }
 
-    private func fillCacheToTarget() async {
+    func fillCacheToTarget() async {
         guard !Task.isCancelled else { return }
         let shouldRefreshVisibleItems = items.count < dailyPicksVisibleCount
         var stalledAttempts = 0
@@ -349,7 +386,7 @@ final class DiscoverViewModel: ObservableObject {
         debugLog("fillCacheToTarget end")
     }
 
-    private func runDailyRefresh() async {
+    func runDailyRefresh() async {
         guard !Task.isCancelled else { return }
         debugLog("runDailyRefresh begin dailyPicksImageLimit=\(dailyPicksImageLimit)")
         do {
@@ -363,42 +400,4 @@ final class DiscoverViewModel: ObservableObject {
             return
         }
     }
-
-    func shouldRunDailyRefresh(forKey key: String) -> Bool {
-        guard let lastRefreshDate = userDefaults.object(forKey: key) as? Date else {
-            debugLog("shouldRunDailyRefresh -> true (no stored date)")
-            return true
-        }
-
-        let result = !calendar.isDate(lastRefreshDate, inSameDayAs: Date())
-        debugLog("shouldRunDailyRefresh lastRefreshDate=\(lastRefreshDate) result=\(result)")
-        return result
-    }
-
-    private func markRefreshedToday() {
-        markRefreshedToday(forKey: AppDefaults.dailyPicksLastRefreshDateKey)
-    }
-
-    func markRefreshedToday(forKey key: String) {
-        userDefaults.set(Date(), forKey: key)
-        debugLog("markRefreshedToday")
-    }
-
-    private var stateLabel: String {
-        switch state {
-        case .loading:
-            "loading"
-        case .loaded:
-            "loaded"
-        case .error:
-            "error"
-        }
-    }
-
-    func debugLog(_ message: String) {
-        #if DEBUG
-        print("DiscoverViewModel:", message)
-        #endif
-    }
-
 }

@@ -1,10 +1,10 @@
-import Combine
 import Foundation
 
 @MainActor
-final class ExploreBreedViewModel: ObservableObject {
-    @Published private(set) var snapshot: ExploreBreedListSnapshot?
-    @Published private(set) var hasCompletedInitialLoad = false
+@Observable
+final class ExploreBreedViewModel {
+    private(set) var snapshot: ExploreBreedListSnapshot?
+    private(set) var hasCompletedInitialLoad = false
 
     private let breedGalleryRepository: BreedGalleryRepository
 

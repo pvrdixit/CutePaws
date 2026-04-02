@@ -1,8 +1,7 @@
-import Combine
 import Foundation
 
-@MainActor
-final class ImageDetailViewModel: ObservableObject, Identifiable {
+@MainActor @Observable
+final class ImageDetailViewModel: Identifiable {
     let id = UUID()
     private let favoriteRepository: FavoriteRepository
     private let flow: ImageDetailFlow
@@ -10,9 +9,9 @@ final class ImageDetailViewModel: ObservableObject, Identifiable {
     /// Top bar label (matches `SectionHeadingView` titles on Discover / breed gallery).
     let sectionChromeTitle: String
 
-    @Published private(set) var items: [DetailMediaItem]
-    @Published var selectedIndex: Int
-    @Published var isCurrentFavorite = false
+    private(set) var items: [DetailMediaItem]
+    var selectedIndex: Int
+    var isCurrentFavorite = false
 
     init(
         items: [DetailMediaItem],

@@ -25,7 +25,7 @@ final class DogCeoRemoteDataSource: DiscoverRemoteDataSource {
             }
 
             let request = URLRequest(url: url)
-            let response = try await httpUtility.request(DogCeoImageListResponse.self, with: request)
+            let response = try await httpUtility.request(DogCeoListResponse.self, with: request)
             urls.append(contentsOf: response.message.compactMap(URL.init(string:)))
             remainingCount -= batchCount
         }

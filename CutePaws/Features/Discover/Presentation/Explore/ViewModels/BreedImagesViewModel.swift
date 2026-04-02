@@ -1,8 +1,8 @@
-import Combine
 import Foundation
 
 @MainActor
-final class BreedImagesViewModel: ObservableObject {
+@Observable
+final class BreedImagesViewModel {
     enum Phase: Equatable {
         case idle
         case loading
@@ -10,8 +10,8 @@ final class BreedImagesViewModel: ObservableObject {
         case failed(String)
     }
 
-    @Published private(set) var phase: Phase = .idle
-    @Published private(set) var items: [MediaItem] = []
+    private(set) var phase: Phase = .idle
+    private(set) var items: [MediaItem] = []
 
     let sectionTitle: String
 

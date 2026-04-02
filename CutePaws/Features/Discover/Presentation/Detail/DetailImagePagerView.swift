@@ -126,32 +126,19 @@ private struct DetailAspectFittedVideoPage: View {
     }
 }
 
-private struct DetailImagePagerPreviewHost: View {
-    @State private var selectedIndex = 0
-    @State private var isZoomed = false
-
-    private let items = PreviewData.mediaItems.prefix(3).map {
-        DetailMediaItem(
-            id: $0.id,
-            sourceID: $0.id,
-            displayName: "Dog",
-            mediaType: .photo,
-            imagePath: $0.localFilePath
-        )
-    }
-
-    var body: some View {
-        DetailImagePagerView(
-            items: items,
-            selectedIndex: $selectedIndex,
-            currentItemID: items.indices.contains(selectedIndex) ? items[selectedIndex].id : nil,
-            isCurrentImageZoomed: $isZoomed,
-            onDismiss: {}
-        )
-        .background(Color.appBackground)
-    }
-}
-
 #Preview {
-    DetailImagePagerPreviewHost()
+    @Previewable @State var selectedIndex = 0
+    @Previewable @State var isZoomed = false
+    let items = [
+        DetailMediaItem(id: "a", sourceID: "a", displayName: "Dog", mediaType: .photo, imagePath: nil),
+        DetailMediaItem(id: "b", sourceID: "b", displayName: "Dog", mediaType: .photo, imagePath: nil),
+    ]
+    DetailImagePagerView(
+        items: items,
+        selectedIndex: $selectedIndex,
+        currentItemID: items.indices.contains(selectedIndex) ? items[selectedIndex].id : nil,
+        isCurrentImageZoomed: $isZoomed,
+        onDismiss: {}
+    )
+    .background(Color.appBackground)
 }

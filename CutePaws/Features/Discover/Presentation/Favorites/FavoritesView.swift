@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct FavoritesView: View {
-    @ObservedObject var viewModel: FavoritesViewModel
+    @Bindable var viewModel: FavoritesViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isCurrentImageZoomed = false
 
     var body: some View {
         ZStack(alignment: .top) {
-            AppBackgroundView().ignoresSafeArea()
+            Color.appBackground
+                .ignoresSafeArea()
 
             if viewModel.items.isEmpty {
                 EmptyStateView(
@@ -82,5 +83,6 @@ private struct FavoritesPreviewRepository: FavoriteRepository {
 }
 
 #Preview {
-    FavoritesView(viewModel: FavoritesViewModel(favoriteRepository: FavoritesPreviewRepository()))
+    @Previewable @State var viewModel = FavoritesViewModel(favoriteRepository: FavoritesPreviewRepository())
+    FavoritesView(viewModel: viewModel)
 }

@@ -1,13 +1,13 @@
-import Combine
 import Foundation
 
 @MainActor
-final class FavoritesViewModel: ObservableObject, Identifiable {
+@Observable
+final class FavoritesViewModel: Identifiable {
     let id = UUID()
 
-    @Published private(set) var items: [DetailMediaItem] = []
-    @Published var selectedIndex = 0
-    @Published var showRemoveFavoriteAlert = false
+    private(set) var items: [DetailMediaItem] = []
+    var selectedIndex = 0
+    var showRemoveFavoriteAlert = false
 
     private let favoriteRepository: FavoriteRepository
 

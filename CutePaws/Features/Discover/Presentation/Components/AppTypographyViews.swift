@@ -6,7 +6,7 @@ struct LargeDisplayTitleView: View {
 
     var body: some View {
         Text(title)
-            .font(.custom("Didot", size: 48))
+            .font(.custom("Didot", size: 42))
             .lineLimit(1)
             .minimumScaleFactor(0.7)
     }
@@ -22,37 +22,21 @@ enum SectionHeadingStyle: Sendable {
 /// Section and screen headings used across Discover, explore, and rails.
 struct SectionHeadingView: View {
     let title: String
-    var style: SectionHeadingStyle
-
-    init(title: String, style: SectionHeadingStyle = .largeDisplay) {
+    
+    init(title: String) {
         self.title = title
-        self.style = style
     }
 
     var body: some View {
         Text(title)
-            .font(font)
-    }
-
-    private var font: Font {
-        switch style {
-        case .largeDisplay:
-            .custom("Didot", size: 24)
-        case .compactBold:
-            .custom("Didot Bold", size: 13)
-        }
+            .font(.custom("Didot", size: 21))
     }
 }
 
-#Preview("Large display title") {
-    LargeDisplayTitleView(title: "Discover")
-        .preferredColorScheme(.light)
-}
-
-#Preview("Section headings") {
+#Preview {
     VStack(alignment: .leading, spacing: 16) {
-        SectionHeadingView(title: "Daily Picks", style: .largeDisplay)
-        SectionHeadingView(title: "Explore breeds", style: .compactBold)
+        LargeDisplayTitleView(title: "Discover")
+        SectionHeadingView(title: "Daily Picks")
     }
     .padding()
 }

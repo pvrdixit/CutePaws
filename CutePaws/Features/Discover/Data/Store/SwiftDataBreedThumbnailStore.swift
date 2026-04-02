@@ -8,38 +8,6 @@ protocol BreedThumbnailStore {
     func fetchAllSnapshot() async -> [BreedThumbnailItem]
 }
 
-@Model
-final class StoredBreedThumbnailItem {
-    @Attribute(.unique) var catalogKey: String
-    var breedName: String
-    var subBreedName: String
-    var thumbnailImageData: Data
-    var aspectRatio: Double
-    var remoteURLString: String
-    var sourceRaw: String
-    var updatedAt: Date
-
-    init(
-        catalogKey: String,
-        breedName: String,
-        subBreedName: String,
-        thumbnailImageData: Data,
-        aspectRatio: Double,
-        remoteURLString: String,
-        sourceRaw: String,
-        updatedAt: Date
-    ) {
-        self.catalogKey = catalogKey
-        self.breedName = breedName
-        self.subBreedName = subBreedName
-        self.thumbnailImageData = thumbnailImageData
-        self.aspectRatio = aspectRatio
-        self.remoteURLString = remoteURLString
-        self.sourceRaw = sourceRaw
-        self.updatedAt = updatedAt
-    }
-}
-
 @MainActor
 final class SwiftDataBreedThumbnailStore: BreedThumbnailStore {
     private let context: ModelContext

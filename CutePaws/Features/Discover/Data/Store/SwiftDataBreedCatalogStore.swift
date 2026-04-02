@@ -18,19 +18,6 @@ private enum BreedCatalogCodec {
     }
 }
 
-@Model
-final class StoredBreedExploreMetadata {
-    @Attribute(.unique) var singletonKey: String
-    var catalogPayload: Data?
-    var thumbnailBootstrapCompleted: Bool
-
-    init(singletonKey: String, catalogPayload: Data?, thumbnailBootstrapCompleted: Bool) {
-        self.singletonKey = singletonKey
-        self.catalogPayload = catalogPayload
-        self.thumbnailBootstrapCompleted = thumbnailBootstrapCompleted
-    }
-}
-
 @MainActor
 final class SwiftDataBreedCatalogStore: BreedCatalogStore {
     /// New key so installs that used hierarchical `/breeds/list/all` re-bootstrap thumbnails for flat `/breeds/list`.
