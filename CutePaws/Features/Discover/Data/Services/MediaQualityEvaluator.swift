@@ -1,41 +1,75 @@
-
-import ImageIO
 import Foundation
+import ImageIO
 
-struct MediaQualityEvaluator {
+/// Per-flow thresholds. Any field left `nil` is not checked.
+struct MediaQualityCriteria: Equatable, Sendable {
+    var downloadedByteLength: ClosedRange<Int>?
+    var maxDownloadedBytes: Int?
+    var minTotalPixels: CGFloat?
+    var aspectRatio: ClosedRange<CGFloat>?
+    var remoteReportedFileBytes: ClosedRange<Int>?
 
-    static let minFileSize = 80_000
-    static let maxFileSize = 1_000_000
-    static let minTotalPixels: CGFloat = 400_000
+    init(
+        downloadedByteLength: ClosedRange<Int>? = nil,
+        maxDownloadedBytes: Int? = nil,
+        minTotalPixels: CGFloat? = nil,
+        aspectRatio: ClosedRange<CGFloat>? = nil,
+        remoteReportedFileBytes: ClosedRange<Int>? = nil
+    ) {
+        self.downloadedByteLength = downloadedByteLength
+        self.maxDownloadedBytes = maxDownloadedBytes
+        self.minTotalPixels = minTotalPixels
+        self.aspectRatio = aspectRatio
+        self.remoteReportedFileBytes = remoteReportedFileBytes
+    }
+}
 
-    static let minAspectRatio: CGFloat = 0.5
-    static let maxAspectRatio: CGFloat = 2.0
+/// One policy per instance, driven by ``MediaQualityCriteria``.
+struct MediaQualityEvaluator: Sendable {
+    private let criteria: MediaQualityCriteria
 
-    static let spotlightMinFileSize = 800_000
-    static let spotlightMaxFileSize = 2_000_000
-    static let miniMomentMinFileSize = 1_000_000
-    static let miniMomentMaxFileSize = 8_000_000
-
-    static func isFileSizeWithinLimits(_ bytes: Int, min: Int, max: Int) -> Bool {
-        bytes >= min && bytes <= max
+    init(criteria: MediaQualityCriteria) {
+        self.criteria = criteria
     }
 
-    static func isAcceptableSpotlightFileSize(_ bytes: Int) -> Bool {
-        isFileSizeWithinLimits(bytes, min: spotlightMinFileSize, max: spotlightMaxFileSize)
-    }
-
-    static func isAcceptableMiniMomentFileSize(_ bytes: Int) -> Bool {
-        isFileSizeWithinLimits(bytes, min: miniMomentMinFileSize, max: miniMomentMaxFileSize)
-    }
-
-    static func isAcceptableImage(data: Data) -> Bool {
-        // File size check
-        guard data.count >= minFileSize,
-              data.count <= maxFileSize else {
+    func passesDownloadedPayload(_ data: Data) -> Bool {
+        if let maxB = criteria.maxDownloadedBytes, data.count > maxB {
+            return false
+        }
+        if let range = criteria.downloadedByteLength, !range.contains(data.count) {
             return false
         }
 
-        // Read metadata without full image decode
+        let needsDimensions = criteria.minTotalPixels != nil || criteria.aspectRatio != nil
+        let dimensions: (width: CGFloat, height: CGFloat)?
+        if needsDimensions {
+            dimensions = Self.pixelDimensions(for: data)
+        } else {
+            dimensions = nil
+        }
+
+        if let minPx = criteria.minTotalPixels {
+            guard let dims = dimensions, dims.height > 0 else { return false }
+            guard dims.width * dims.height >= minPx else { return false }
+        }
+
+        if let arRange = criteria.aspectRatio {
+            guard let dims = dimensions, dims.height > 0 else { return false }
+            let ratio = dims.width / dims.height
+            guard arRange.contains(ratio) else { return false }
+        }
+
+        return true
+    }
+
+    func passesRemoteReportedFileSize(_ bytes: Int) -> Bool {
+        guard let range = criteria.remoteReportedFileBytes else {
+            return true
+        }
+        return range.contains(bytes)
+    }
+
+    private static func pixelDimensions(for data: Data) -> (width: CGFloat, height: CGFloat)? {
         guard
             let source = CGImageSourceCreateWithData(data as CFData, nil),
             let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
@@ -43,21 +77,8 @@ struct MediaQualityEvaluator {
             let height = properties[kCGImagePropertyPixelHeight] as? CGFloat,
             height > 0
         else {
-            return false
+            return nil
         }
-
-        let totalPixels = width * height
-        let aspectRatio = width / height
-
-        guard totalPixels >= minTotalPixels else {
-            return false
-        }
-
-        guard aspectRatio >= minAspectRatio,
-              aspectRatio <= maxAspectRatio else {
-            return false
-        }
-
-        return true
+        return (width, height)
     }
 }

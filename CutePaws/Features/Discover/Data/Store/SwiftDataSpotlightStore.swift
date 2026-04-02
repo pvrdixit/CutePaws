@@ -123,7 +123,7 @@ final class SwiftDataSpotlightStore: SpotlightStore {
                             createdAt: item.createdAt,
                             localFilePath: fileStorage.fileReference(for: item.localFilePath),
                             fileSizeBytes: item.fileSizeBytes,
-                            aspectRatio: item.aspectRatio
+                            aspectRatio: item.aspectRatio ?? 1.5
                         )
                     )
                 } else if let localFilePath = item.localFilePath {
@@ -171,8 +171,8 @@ final class SwiftDataSpotlightStore: SpotlightStore {
             remoteURL: url,
             localFilePath: fileStorage.filePath(for: item.localFilePath),
             fileSizeBytes: item.fileSizeBytes,
-            aspectRatio: item.aspectRatio,
-            createdAt: item.createdAt
+            createdAt: item.createdAt,
+            aspectRatio: item.aspectRatio
         )
     }
 

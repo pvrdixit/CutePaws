@@ -6,9 +6,11 @@ protocol MiniMomentRemoteDataSource {
 
 final class RandomDogMiniMomentRemoteDataSource: MiniMomentRemoteDataSource {
     private let httpUtility: HTTPUtility
+    private let mediaQualityEvaluator: MediaQualityEvaluator
 
-    init(httpUtility: HTTPUtility) {
+    init(httpUtility: HTTPUtility, mediaQualityEvaluator: MediaQualityEvaluator) {
         self.httpUtility = httpUtility
+        self.mediaQualityEvaluator = mediaQualityEvaluator
     }
 
     func fetchClipCandidates(count: Int) async throws -> [RandomDogImageCandidate] {
@@ -31,7 +33,7 @@ final class RandomDogMiniMomentRemoteDataSource: MiniMomentRemoteDataSource {
                 with: URLRequest(url: url)
             )
 
-            guard MediaQualityEvaluator.isAcceptableMiniMomentFileSize(response.fileSizeBytes) else { continue }
+            guard mediaQualityEvaluator.passesRemoteReportedFileSize(response.fileSizeBytes) else { continue }
 
             guard let mediaURL = URL(string: response.url) else {
                 continue

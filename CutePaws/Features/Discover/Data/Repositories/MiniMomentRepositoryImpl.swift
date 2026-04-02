@@ -59,8 +59,8 @@ final class MiniMomentRepositoryImpl: MiniMomentRepository {
                     let localPath = try mediaFileStorage.saveImageData(data, suggestedPathExtension: "mp4")
                     let fileURL = URL(fileURLWithPath: localPath)
                     guard
-                        let ratio = await MediaAspectRatioReader.videoAspectRatio(fileURL: fileURL),
-                        MediaAspectRatioReader.isAcceptableMediaRailAspectRatio(ratio)
+                        let ratio = await VideoAspectRatioReader.videoAspectRatio(fileURL: fileURL),
+                        VideoAspectRatioReader.isAcceptableRailAspectRatio(ratio)
                     else {
                         mediaFileStorage.removeFile(at: localPath)
                         continue
@@ -71,7 +71,8 @@ final class MiniMomentRepositoryImpl: MiniMomentRepository {
                             remoteURL: url,
                             localFilePath: localPath,
                             fileSizeBytes: fileSize,
-                            createdAt: Date()
+                            createdAt: Date(),
+                            aspectRatio: nil
                         )
                     )
                 } catch {

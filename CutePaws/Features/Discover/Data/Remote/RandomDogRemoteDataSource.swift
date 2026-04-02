@@ -11,9 +11,11 @@ protocol SpotlightRemoteDataSource {
 
 final class RandomDogRemoteDataSource: SpotlightRemoteDataSource {
     private let httpUtility: HTTPUtility
+    private let mediaQualityEvaluator: MediaQualityEvaluator
 
-    init(httpUtility: HTTPUtility) {
+    init(httpUtility: HTTPUtility, mediaQualityEvaluator: MediaQualityEvaluator) {
         self.httpUtility = httpUtility
+        self.mediaQualityEvaluator = mediaQualityEvaluator
     }
 
     func fetchImageCandidates(count: Int) async throws -> [RandomDogImageCandidate] {
@@ -36,7 +38,7 @@ final class RandomDogRemoteDataSource: SpotlightRemoteDataSource {
                 with: URLRequest(url: url)
             )
 
-            guard MediaQualityEvaluator.isAcceptableSpotlightFileSize(response.fileSizeBytes) else {
+            guard mediaQualityEvaluator.passesRemoteReportedFileSize(response.fileSizeBytes) else {
                 continue
             }
 

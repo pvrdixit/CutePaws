@@ -148,7 +148,8 @@ final class SwiftDataMiniMomentStore: MiniMomentStore {
             remoteURL: url,
             localFilePath: fileStorage.filePath(for: stored.localFilePath),
             fileSizeBytes: stored.fileSizeBytes,
-            createdAt: stored.createdAt
+            createdAt: stored.createdAt,
+            aspectRatio: nil
         )
     }
 

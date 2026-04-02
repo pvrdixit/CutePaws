@@ -4,6 +4,7 @@ final class SpotlightRepositoryImpl: SpotlightRepository {
     private let remoteDataSource: SpotlightRemoteDataSource
     private let imageDownloadService: ImageDownloading
     private let imageMetadataService: ImageMetadataService
+    private let mediaQualityEvaluator: MediaQualityEvaluator
     private let mediaFileStorage: MediaFileStorage
     private let store: SpotlightStore
     private let logger: AppLogger
@@ -12,6 +13,7 @@ final class SpotlightRepositoryImpl: SpotlightRepository {
         remoteDataSource: SpotlightRemoteDataSource,
         imageDownloadService: ImageDownloading,
         imageMetadataService: ImageMetadataService,
+        mediaQualityEvaluator: MediaQualityEvaluator,
         mediaFileStorage: MediaFileStorage,
         store: SpotlightStore,
         logger: AppLogger
@@ -19,6 +21,7 @@ final class SpotlightRepositoryImpl: SpotlightRepository {
         self.remoteDataSource = remoteDataSource
         self.imageDownloadService = imageDownloadService
         self.imageMetadataService = imageMetadataService
+        self.mediaQualityEvaluator = mediaQualityEvaluator
         self.mediaFileStorage = mediaFileStorage
         self.store = store
         self.logger = logger
@@ -57,6 +60,7 @@ final class SpotlightRepositoryImpl: SpotlightRepository {
             for (url, data) in downloaded {
                 let key = url.absoluteString
                 guard seenRemoteURLs.insert(key).inserted else { continue }
+                guard mediaQualityEvaluator.passesDownloadedPayload(data) else { continue }
 
                 do {
                     let localPath = try mediaFileStorage.saveImageData(data, suggestedPathExtension: url.pathExtension)
@@ -67,8 +71,8 @@ final class SpotlightRepositoryImpl: SpotlightRepository {
                             remoteURL: url,
                             localFilePath: localPath,
                             fileSizeBytes: fileSize,
-                            aspectRatio: aspectRatio,
-                            createdAt: Date()
+                            createdAt: Date(),
+                            aspectRatio: aspectRatio
                         )
                     )
                 } catch {

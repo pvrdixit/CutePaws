@@ -4,6 +4,7 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
     private let remoteDataSource: DiscoverRemoteDataSource
     private let imageDownloadService: ImageDownloading
     private let imageMetadataService: ImageMetadataService
+    private let dailyPicksQuality: MediaQualityEvaluator
     private let mediaFileStorage: MediaFileStorage
     private let store: DiscoverStore
     private let logger: AppLogger
@@ -12,6 +13,7 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
         remoteDataSource: DiscoverRemoteDataSource,
         imageDownloadService: ImageDownloading,
         imageMetadataService: ImageMetadataService,
+        dailyPicksQuality: MediaQualityEvaluator,
         mediaFileStorage: MediaFileStorage,
         store: DiscoverStore,
         logger: AppLogger
@@ -19,6 +21,7 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
         self.remoteDataSource = remoteDataSource
         self.imageDownloadService = imageDownloadService
         self.imageMetadataService = imageMetadataService
+        self.dailyPicksQuality = dailyPicksQuality
         self.mediaFileStorage = mediaFileStorage
         self.store = store
         self.logger = logger
@@ -125,7 +128,7 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
     }
 
     private func makeMediaItem(url: URL, data: Data) -> PreparedMediaItem? {
-        guard MediaQualityEvaluator.isAcceptableImage(data: data) else {
+        guard dailyPicksQuality.passesDownloadedPayload(data) else {
             return nil
         }
 
@@ -143,7 +146,6 @@ final class DiscoverRepositoryImpl: DiscoverRepository {
                 remoteURL: url,
                 localFilePath: localFilePath,
                 aspectRatio: imageMetadataService.aspectRatio(from: data) ?? 1.0,
-                source: .dogCeo,
                 createdAt: Date()
             )
         )

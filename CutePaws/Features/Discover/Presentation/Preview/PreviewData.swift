@@ -24,7 +24,6 @@ enum PreviewData {
             remoteURL: URL(string: urlString)!,
             localFilePath: localFilePath,
             aspectRatio: aspectRatio,
-            source: .dogCeo,
             createdAt: Date()
         )
     }

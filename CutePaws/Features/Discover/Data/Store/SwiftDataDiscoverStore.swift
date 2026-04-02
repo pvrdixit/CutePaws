@@ -138,7 +138,7 @@ final class SwiftDataDiscoverStore: DiscoverStore {
                     context.insert(
                         StoredMediaItem(
                             remoteURLString: remoteURLString,
-                            sourceRaw: item.source.rawValue,
+                            sourceRaw: DogCeoPersistedSource.rawValue,
                             createdAt: item.createdAt,
                             localFilePath: fileStorage.fileReference(for: item.localFilePath),
                             aspectRatio: item.aspectRatio
@@ -195,9 +195,8 @@ final class SwiftDataDiscoverStore: DiscoverStore {
 
     private func makeMediaItem(from item: StoredMediaItem) -> MediaItem? {
         guard
-            item.sourceRaw == MediaSource.dogCeo.rawValue,
-            let url = URL(string: item.remoteURLString),
-            let source = MediaSource(rawValue: item.sourceRaw)
+            item.sourceRaw == DogCeoPersistedSource.rawValue,
+            let url = URL(string: item.remoteURLString)
         else {
             return nil
         }
@@ -206,13 +205,12 @@ final class SwiftDataDiscoverStore: DiscoverStore {
             remoteURL: url,
             localFilePath: fileStorage.filePath(for: item.localFilePath),
             aspectRatio: item.aspectRatio,
-            source: source,
             createdAt: item.createdAt
         )
     }
 
     private func isValid(_ item: StoredMediaItem) -> Bool {
-        item.sourceRaw == MediaSource.dogCeo.rawValue
+        item.sourceRaw == DogCeoPersistedSource.rawValue
         && fileStorage.fileExists(at: fileStorage.filePath(for: item.localFilePath))
     }
 
@@ -240,7 +238,7 @@ final class SwiftDataDiscoverStore: DiscoverStore {
     }
 
     private func invalidReason(for item: StoredMediaItem) -> String {
-        if item.sourceRaw != MediaSource.dogCeo.rawValue {
+        if item.sourceRaw != DogCeoPersistedSource.rawValue {
             return "unsupportedSource"
         }
 

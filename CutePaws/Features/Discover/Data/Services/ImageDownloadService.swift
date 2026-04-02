@@ -2,6 +2,8 @@ import Foundation
 
 protocol ImageDownloading {
     func downloadImages(from urls: [URL], maxConcurrent: Int) async -> [(url: URL, data: Data)]
+    /// Single-image fetch for bounded explore downloads (no multi-attempt retry loop).
+    func downloadImage(from url: URL, timeoutInterval: TimeInterval) async -> Data?
 }
 
 final class ImageDownloadService: ImageDownloading {
@@ -69,5 +71,17 @@ final class ImageDownloadService: ImageDownloading {
         }
 
         return results
+    }
+
+    func downloadImage(from url: URL, timeoutInterval: TimeInterval) async -> Data? {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = timeoutInterval
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        do {
+            return try await httpUtility.requestData(with: request)
+        } catch {
+            return nil
+        }
     }
 }

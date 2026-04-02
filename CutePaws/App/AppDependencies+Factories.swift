@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 
 extension AppDependencies {
     private enum DiscoverLimits {
@@ -7,7 +6,7 @@ extension AppDependencies {
         static let dailyPicksImageLimit = 125
         static let spotlightImageLimit = 10
         static let miniMomentsStoreLimit = 50
-        static let miniMomentsVisibleLimit = 10
+        static let miniMomentsRailVisibleLimit = 10
     }
 
     func makeDiscoverViewModel() -> DiscoverViewModel {
@@ -23,6 +22,7 @@ extension AppDependencies {
             repository: discoverRepository,
             spotlightRepository: spotlightRepository,
             miniMomentRepository: miniMomentRepository,
+            breedGalleryRepository: breedGalleryRepository,
             favoriteRepository: favoriteRepository,
             initialItems: initialItems,
             initialSpotlightImagePath: initialSpotlightItem?.localFilePath,
@@ -32,7 +32,7 @@ extension AppDependencies {
             dailyPicksImageLimit: DiscoverLimits.dailyPicksImageLimit,
             spotlightImageLimit: DiscoverLimits.spotlightImageLimit,
             miniMomentsStoreLimit: DiscoverLimits.miniMomentsStoreLimit,
-            miniMomentsRailVisibleLimit: DiscoverLimits.miniMomentsVisibleLimit,
+            miniMomentsRailVisibleLimit: DiscoverLimits.miniMomentsRailVisibleLimit,
             userDefaults: .standard,
             calendar: .current
         )
